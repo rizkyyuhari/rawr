@@ -18,28 +18,36 @@ html {
     ),
     conic-gradient(from var(--border-angle), transparent 20%, #08f, #f03);
   background-size: calc(100% - (var(--border-size) * 2))
-      calc(100% - (var(--border-size) * 2)),
-    cover;
+      calc(100% - (var(--border-size) * 2));
   background-position: center center;
   background-repeat: no-repeat;
 
-  animation: bg-spin 3s linear infinite;
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes bg-spin {
+.border {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: var(--border-size) solid transparent;
+  border-image: conic-gradient(
+    from 0deg,
+    #213,
+    #112 50%,
+    #213
+  ) var(--border-size);
+  border-image-slice: 1;
+  border-image-source: conic-gradient(from 0deg, transparent 20%, #08f, #f03);
+  animation: borderAnimation 3s linear infinite;
+}
+
+@keyframes borderAnimation {
   to {
-    --border-angle: 1turn;
+    transform: rotate(1turn);
   }
 }
 
-.box:hover {
+.box:hover .border {
   animation-play-state: paused;
-}
-
-:root {
-  --border-angle: 0turn;
-}
-
-.box {
-  --border-angle: var(--border-angle);
 }
