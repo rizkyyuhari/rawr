@@ -1,25 +1,63 @@
-ini file app.jsx
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import './App.css';
+saya punya component  contact:
 
-import Navbar from './components/Navbar';
-import HomePage from './pages/HomePage/HomePage';
+import PropTypes from 'prop-types';
+import './contact.style.css';
+import { Link } from 'react-router-dom';
 
-const route = createBrowserRouter([{ path: '/', element: <Navbar /> }]);
-
-const App = () => <RouterProvider route={route} />;
-
-export default App;
-
-ini file main.jsx:
-import { RouterProvider } from 'react-router-dom';
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+const Contact = ({ contact }) => (
+  <div>
+    <Link to={`/contacts/${contact.id}`}>
+      <p>{contact.name}</p>
+      <p>{contact.phoneNumber}</p>
+    </Link>
+  </div>
 );
+
+Contact.propTypes = {
+  contact: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    phoneNumber: PropTypes.string.isRequired
+  }).isRequired
+};
+
+export default Contact;
+
+
+dipakai di contaclist companent :
+import PropTypes from 'prop-types';
+import { Outlet } from 'react-router';
+import Contact from './Contact';
+
+const ContactList = ({ contacts }) => (
+  <>
+    {contacts.map((contact) => (
+      <Contact contact={contact} key={contact.phoneNumber} />
+    ))}
+    <Outlet />
+  </>
+);
+
+ContactList.propTypes = {
+  contacts: PropTypes.arrayOf(Contact.propTypes.contact).isRequired
+};
+
+export default ContactList;
+
+nah di hompage pake contact juga tapi dibungkus contact list: 
+import ContactList from '../../components/ContactList';
+import useAxiosGet from '../../hooks/useAxiosGet';
+
+const HomePage = () => {
+  const { data, error, isLoading } = useAxiosGet();
+  return (
+    <div>
+      <h3 style={{ color: 'red' }}>{error && error}</h3>
+      <h1>Assalamualaikum Axel</h1>
+      {isLoading ? <div className="loader" data-testid="loader" /> : <ContactList contacts={data.contacts} />}
+    </div>
+  );
+};
+
+export default HomePage;
+
+
