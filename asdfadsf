@@ -1,22 +1,75 @@
-import PropTypes from 'prop-types';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { API_URL, CUSTOMER_ID } from '../../config';
+import Customer from './Customer';
 
-const SearchInputTransaction = ({ handleSearchTransaction }) => {
-  const handleSearchTextChange = (event) => {
-    handleSearchTransaction(event.target.value);
+const EWalletPage = () => {
+  const navigate = useNavigate();
+  const [customer, setCustomer] = useState({ name: '', balance: '' });
+  const [errorCustomer, setErrorCustomer] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchCustomer = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_URL}/customers/${CUSTOMER_ID}`);
+      const {
+        wallet: { balance },
+        name,
+        _id: id
+      } = response.data;
+      setCustomer({ balance: new Intl.NumberFormat(['ban', 'id']).format(balance), name, id });
+    } catch (errorFetch) {
+      setErrorCustomer(errorFetch);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchCustomer();
+  }, []);
+
   return (
-    <div className="input-group mb-3">
-      <input
-        onChange={handleSearchTextChange}
-        type="text"
-        className="form-control"
-      />
+    <div className="container d-flex flex-column align-items-center justify-content-center p-4 min-vh-100 ">
+      <div className="container d-flex flex-column align-items-center p-4">
+        {errorCustomer && (
+          <div className="alert alert-danger" role="alert">
+            Oopss, Something Went Wrong!
+          </div>
+        )}
+        {isLoading ? (
+          <div className="spinner-border text-primary" data-testid="loader">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        ) : (
+          <Customer customer={customer} />
+        )}
+      </div>
+      <button type="button" onClick={() => navigate('/wallets/transactions')}>
+        Transaction History
+      </button>
     </div>
   );
 };
 
-SearchInputTransaction.propTypes = {
-  handleSearchTextChange: PropTypes.func.isRequired
-};
+export default EWalletPage;
 
-export default SearchInputTransaction;
+
+it('should navigate to TransactionsPage when user click Transaction History', async () => {
+    axios.get.mockResolvedValueOnce(customer);
+    const { getByRole, findByRole, findByText, getByText } = render(
+      <MemoryRouter>
+        <EWalletPage />
+      </MemoryRouter>
+    );
+    const navigateButton = getByRole('button', { name: 'Transaction History' });
+    const user = userEvent.setup();
+    expect(await findByText(`Hello, ${customer.data.name}`)).toBeDefined();
+    expect(getByText('$5.000.000')).toBeDefined();
+
+    screen.logTestingPlaygroundURL();
+    await user.click(navigateButton);
+    expect(await findByRole('button', { name: 'Transaction History' })).toBeNull();
+  });
