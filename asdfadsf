@@ -31,21 +31,8 @@ const TransactionsPage = () => {
     setKeyword(event.toLowerCase());
   };
 
-  const sortingTransactions = (order) => {
-    const transactionsOrder = transactions.transactions.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      if (order === 'asc') {
-        return dateA - dateB;
-      }
-      return dateB - dateA;
-    });
-    return transactionsOrder;
-  };
-
   const filteredTransaction = () => {
-    const sortingTransactionsOrder = sortingTransactions('desc');
-    return sortingTransactionsOrder.filter(
+    return transactions.transactions.filter(
       (transaction) => transaction.description.toLowerCase().includes(keyword) || transaction.amount.toString().includes(keyword)
     );
   };
@@ -74,74 +61,3 @@ const TransactionsPage = () => {
 };
 
 export default TransactionsPage;
-
-  it('should render transactions list with description that has "m" character when user search transaction by description with keyword "m"', async () => {
-    axios.get.mockResolvedValueOnce(transactions);
-    const { getByTestId, getByText } = render(
-      <MemoryRouter>
-        <TransactionsPage />
-      </MemoryRouter>
-    );
-    const user = userEvent.setup();
-    const searchInput = getByTestId('search-input');
-    const keyword = 'm';
-    const filteredTransaction = transactions.data.transactions[0];
-
-    await user.type(searchInput, keyword);
-
-    expect(getByText(filteredTransaction.description)).toBeDefined();
-  });
-
-  it('should render transactions list with amount that has "1" character when user search transaction by amount with keyword "1"', async () => {
-    axios.get.mockResolvedValueOnce(transactions);
-    const { getByTestId, getByText } = render(
-      <MemoryRouter>
-        <TransactionsPage />
-      </MemoryRouter>
-    );
-    const user = userEvent.setup();
-    const searchInput = getByTestId('search-input');
-    const keyword = '1';
-    const filteredTransaction = transactions.data.transactions[1];
-
-    await user.type(searchInput, keyword);
-
-    expect(getByText(filteredTransaction.amount)).toBeDefined();
-  });
-ini data transactions dan customer :
-export const customer = {
-  data: {
-    name: 'Rizky',
-    wallet: {
-      balance: 5000000
-    }
-  }
-};
-
-export const transactions = {
-  data: {
-    transactions: [
-      {
-        _id: '65347709c1d1b69737e659d4',
-        description: 'saving money',
-        amount: 324234,
-        type: 'deposit',
-        date: '10/22/2023',
-        wallet: '65347533081c1d40daf25451'
-      },
-      {
-        _id: '653b6501baaa53367c17a60a',
-        description: 'saving',
-        amount: 294031,
-        type: 'withdraw',
-        date: '10/27/2023',
-        wallet: '65347533081c1d40daf25451'
-      }
-    ]
-  }
-};
-
-
-kenapa bagian yang bawah ini error ya? Unable to find an element with the text: saving. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher
-expect(getByText(filteredTransaction.description)).toBeDefined();
-expect(getByText(filteredTransaction.amount)).toBeDefined();
