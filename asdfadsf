@@ -1,63 +1,87 @@
-saya punya component  contact:
 
+export default CustomerPage;
 import PropTypes from 'prop-types';
-import './contact.style.css';
-import { Link } from 'react-router-dom';
 
-const Contact = ({ contact }) => (
-  <div>
-    <Link to={`/contacts/${contact.id}`}>
-      <p>{contact.name}</p>
-      <p>{contact.phoneNumber}</p>
-    </Link>
+const Customer = ({ customer }) => (
+  <div className="custom-color-card-detail card-detail w-50 rounded p-3 mb-5">
+    <h2 className="mb-4">{`Hello, ${customer.name}`}</h2>
+    <p>Your Balance</p>
+    <h3>{`$${customer.balance}`}</h3>
   </div>
 );
 
-Contact.propTypes = {
-  contact: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    phoneNumber: PropTypes.string.isRequired
+Customer.propTypes = {
+  customer: PropTypes.shape({
+    balance: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired
   }).isRequired
 };
 
-export default Contact;
+export default Customer;
 
+import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { API_URL, CUSTOMER_ID, WALLET_ID } from '../../config';
+import Customer from './Customer';
+import CustomerTransactions from './CustomerTransactions';
 
-dipakai di contaclist companent :
-import PropTypes from 'prop-types';
-import { Outlet } from 'react-router';
-import Contact from './Contact';
+const CustomerPage = () => {
+  const [customer, setCustomer] = useState({});
+  const [transactions, setTransactions] = useState([]);
+  const [errorCustomer, setErrorCustomer] = useState('');
+  const [errorTransactions, setErrorTransactions] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-const ContactList = ({ contacts }) => (
-  <>
-    {contacts.map((contact) => (
-      <Contact contact={contact} key={contact.phoneNumber} />
-    ))}
-    <Outlet />
-  </>
-);
+  const fetchCustomer = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${API_URL}/customers/${CUSTOMER_ID}`);
+      const {
+        wallet: { balance },
+        name,
+        _id: id
+      } = response.data;
+      setCustomer({ balance: new Intl.NumberFormat(['ban', 'id']).format(balance), name, id });
+    } catch (errorFetch) {
+      setErrorCustomer(errorFetch);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-ContactList.propTypes = {
-  contacts: PropTypes.arrayOf(Contact.propTypes.contact).isRequired
-};
+  const fetchCustomerTransactions = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/wallets/${WALLET_ID}/transactions`);
+      setTransactions([...response.data.transactions]);
+    } catch (error) {
+      setErrorTransactions(error);
+    }
+  };
+  useEffect(() => {
+    (async () => {
+      await fetchCustomer();
+      await fetchCustomerTransactions();
+    })();
+  }, []);
 
-export default ContactList;
-
-nah di hompage pake contact juga tapi dibungkus contact list: 
-import ContactList from '../../components/ContactList';
-import useAxiosGet from '../../hooks/useAxiosGet';
-
-const HomePage = () => {
-  const { data, error, isLoading } = useAxiosGet();
   return (
-    <div>
-      <h3 style={{ color: 'red' }}>{error && error}</h3>
-      <h1>Assalamualaikum Axel</h1>
-      {isLoading ? <div className="loader" data-testid="loader" /> : <ContactList contacts={data.contacts} />}
+    <div className="container d-flex flex-column align-items-around p-4">
+      {(errorCustomer || errorTransactions) && (
+        <div className="alert alert-danger" role="alert">
+          Oopss, Something Went Wrong!
+        </div>
+      )}
+      {isLoading ? (
+        <div className="spinner-border text-primary" data-testid="loaderCustomer">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      ) : (
+        <Customer customer={customer} />
+      )}
+      <h2 className="text-white">Transactions</h2>
+      {transactions && <CustomerTransactions transactions={transactions} />}
     </div>
   );
 };
 
-export default HomePage;
-
-
+kenapa warning Warning: Failed prop type: The prop `customer.balance` is marked as required in `Customer`, but its value is `undefined`.
