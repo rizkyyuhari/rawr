@@ -1,38 +1,4 @@
-
-export default CustomerPage;
-import PropTypes from 'prop-types';
-
-const Customer = ({ customer }) => (
-  <div className="custom-color-card-detail card-detail w-50 rounded p-3 mb-5">
-    <h2 className="mb-4">{`Hello, ${customer.name}`}</h2>
-    <p>Your Balance</p>
-    <h3>{`$${customer.balance}`}</h3>
-  </div>
-);
-
-Customer.propTypes = {
-  customer: PropTypes.shape({
-    balance: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired
-  }).isRequired
-};
-
-export default Customer;
-
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { API_URL, CUSTOMER_ID, WALLET_ID } from '../../config';
-import Customer from './Customer';
-import CustomerTransactions from './CustomerTransactions';
-
-const CustomerPage = () => {
-  const [customer, setCustomer] = useState({});
-  const [transactions, setTransactions] = useState([]);
-  const [errorCustomer, setErrorCustomer] = useState('');
-  const [errorTransactions, setErrorTransactions] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchCustomer = async () => {
+ const fetchCustomer = async () => {
     try {
       setIsLoading(true);
       const response = await axios.get(`${API_URL}/customers/${CUSTOMER_ID}`);
@@ -51,37 +17,12 @@ const CustomerPage = () => {
 
   const fetchCustomerTransactions = async () => {
     try {
+      setIsLoadingTransaction(true);
       const response = await axios.get(`${API_URL}/wallets/${WALLET_ID}/transactions`);
       setTransactions([...response.data.transactions]);
     } catch (error) {
       setErrorTransactions(error);
+    } finally {
+      setIsLoadingTransaction(false);
     }
   };
-  useEffect(() => {
-    (async () => {
-      await fetchCustomer();
-      await fetchCustomerTransactions();
-    })();
-  }, []);
-
-  return (
-    <div className="container d-flex flex-column align-items-around p-4">
-      {(errorCustomer || errorTransactions) && (
-        <div className="alert alert-danger" role="alert">
-          Oopss, Something Went Wrong!
-        </div>
-      )}
-      {isLoading ? (
-        <div className="spinner-border text-primary" data-testid="loaderCustomer">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      ) : (
-        <Customer customer={customer} />
-      )}
-      <h2 className="text-white">Transactions</h2>
-      {transactions && <CustomerTransactions transactions={transactions} />}
-    </div>
-  );
-};
-
-kenapa warning Warning: Failed prop type: The prop `customer.balance` is marked as required in `Customer`, but its value is `undefined`.
