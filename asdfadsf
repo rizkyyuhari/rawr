@@ -1,28 +1,22 @@
- const fetchCustomer = async () => {
-    try {
-      setIsLoading(true);
-      const response = await axios.get(`${API_URL}/customers/${CUSTOMER_ID}`);
-      const {
-        wallet: { balance },
-        name,
-        _id: id
-      } = response.data;
-      setCustomer({ balance: new Intl.NumberFormat(['ban', 'id']).format(balance), name, id });
-    } catch (errorFetch) {
-      setErrorCustomer(errorFetch);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+import PropTypes from 'prop-types';
 
-  const fetchCustomerTransactions = async () => {
-    try {
-      setIsLoadingTransaction(true);
-      const response = await axios.get(`${API_URL}/wallets/${WALLET_ID}/transactions`);
-      setTransactions([...response.data.transactions]);
-    } catch (error) {
-      setErrorTransactions(error);
-    } finally {
-      setIsLoadingTransaction(false);
-    }
+const SearchInputTransaction = ({ handleSearchTransaction }) => {
+  const handleSearchTextChange = (event) => {
+    handleSearchTransaction(event.target.value);
   };
+  return (
+    <div className="input-group mb-3">
+      <input
+        onChange={handleSearchTextChange}
+        type="text"
+        className="form-control"
+      />
+    </div>
+  );
+};
+
+SearchInputTransaction.propTypes = {
+  handleSearchTextChange: PropTypes.func.isRequired
+};
+
+export default SearchInputTransaction;
