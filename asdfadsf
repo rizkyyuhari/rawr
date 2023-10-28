@@ -1,75 +1,147 @@
+/* eslint-disable max-len */
 import axios from 'axios';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { API_URL, CUSTOMER_ID } from '../../config';
-import Customer from './Customer';
+import { API_URL, WALLET_ID } from '../../config';
+import TransactionList from './TransactionList';
+import TransactionsSearch from './TransactionsSearch';
 
-const EWalletPage = () => {
-  const navigate = useNavigate();
-  const [customer, setCustomer] = useState({ name: '', balance: '' });
-  const [errorCustomer, setErrorCustomer] = useState('');
+const TransactionsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [transactions, setTransactions] = useState({ transactions: [] });
+  const [keyword, setKeyword] = useState('');
 
-  const fetchCustomer = async () => {
+  const fetchCustomerTransactions = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get(`${API_URL}/customers/${CUSTOMER_ID}`);
-      const {
-        wallet: { balance },
-        name,
-        _id: id
-      } = response.data;
-      setCustomer({ balance: new Intl.NumberFormat(['ban', 'id']).format(balance), name, id });
+      const response = await axios.get(`${API_URL}/wallets/${WALLET_ID}/transactions`);
+      setTransactions(response.data);
     } catch (errorFetch) {
-      setErrorCustomer(errorFetch);
+      setError(errorFetch);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomer();
+    fetchCustomerTransactions();
   }, []);
 
+  const handleSearchTransaction = (event) => {
+    setKeyword(event.toLowerCase());
+  };
+
+  const sortingTransactions = (order) => {
+    const transactionsOrder = transactions.transactions.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      if (order === 'asc') {
+        return dateA - dateB;
+      }
+      return dateB - dateA;
+    });
+    return transactionsOrder;
+  };
+
+  const filteredTransaction = () => {
+    const sortingTransactionsOrder = sortingTransactions('desc');
+    return sortingTransactionsOrder.filter(
+      (transaction) => transaction.description.toLowerCase().includes(keyword) || transaction.amount.toString().includes(keyword)
+    );
+  };
+
   return (
-    <div className="container d-flex flex-column align-items-center justify-content-center p-4 min-vh-100 ">
-      <div className="container d-flex flex-column align-items-center p-4">
-        {errorCustomer && (
-          <div className="alert alert-danger" role="alert">
-            Oopss, Something Went Wrong!
-          </div>
-        )}
-        {isLoading ? (
-          <div className="spinner-border text-primary" data-testid="loader">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-        ) : (
-          <Customer customer={customer} />
-        )}
+    <div className="container d-flex flex-column p-4 min-vh-100 ">
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          Oopss, Something Went Wrong!
+        </div>
+      )}
+      <h2 className="text-white">Transactions</h2>
+      <div className="d-flex gap-5">
+        <TransactionsSearch handleSearchTransaction={handleSearchTransaction} />
       </div>
-      <button type="button" onClick={() => navigate('/wallets/transactions')}>
-        Transaction History
-      </button>
+
+      {isLoading ? (
+        <div className="spinner-border text-primary" data-testid="loader">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      ) : (
+        <TransactionList transactions={filteredTransaction()} />
+      )}
     </div>
   );
 };
 
-export default EWalletPage;
+export default TransactionsPage;
 
-
-it('should navigate to TransactionsPage when user click Transaction History', async () => {
-    axios.get.mockResolvedValueOnce(customer);
-    const { getByRole, findByRole, findByText, getByText } = render(
+  it('should render transactions list with description that has "m" character when user search transaction by description with keyword "m"', async () => {
+    axios.get.mockResolvedValueOnce(transactions);
+    const { getByTestId, getByText } = render(
       <MemoryRouter>
-        <EWalletPage />
+        <TransactionsPage />
       </MemoryRouter>
     );
-    const navigateButton = getByRole('button', { name: 'Transaction History' });
     const user = userEvent.setup();
-    expect(await findByText(`Hello, ${customer.data.name}`)).toBeDefined();
-    expect(getByText('$5.000.000')).toBeDefined();
+    const searchInput = getByTestId('search-input');
+    const keyword = 'm';
+    const filteredTransaction = transactions.data.transactions[0];
 
-    screen.logTestingPlaygroundURL();
-    await user.click(navigateButton);
-    expect(await findByRole('button', { name: 'Transaction History' })).toBeNull();
+    await user.type(searchInput, keyword);
+
+    expect(getByText(filteredTransaction.description)).toBeDefined();
   });
+
+  it('should render transactions list with amount that has "1" character when user search transaction by amount with keyword "1"', async () => {
+    axios.get.mockResolvedValueOnce(transactions);
+    const { getByTestId, getByText } = render(
+      <MemoryRouter>
+        <TransactionsPage />
+      </MemoryRouter>
+    );
+    const user = userEvent.setup();
+    const searchInput = getByTestId('search-input');
+    const keyword = '1';
+    const filteredTransaction = transactions.data.transactions[1];
+
+    await user.type(searchInput, keyword);
+
+    expect(getByText(filteredTransaction.amount)).toBeDefined();
+  });
+ini data transactions dan customer :
+export const customer = {
+  data: {
+    name: 'Rizky',
+    wallet: {
+      balance: 5000000
+    }
+  }
+};
+
+export const transactions = {
+  data: {
+    transactions: [
+      {
+        _id: '65347709c1d1b69737e659d4',
+        description: 'saving money',
+        amount: 324234,
+        type: 'deposit',
+        date: '10/22/2023',
+        wallet: '65347533081c1d40daf25451'
+      },
+      {
+        _id: '653b6501baaa53367c17a60a',
+        description: 'saving',
+        amount: 294031,
+        type: 'withdraw',
+        date: '10/27/2023',
+        wallet: '65347533081c1d40daf25451'
+      }
+    ]
+  }
+};
+
+
+kenapa bagian yang bawah ini error ya? Unable to find an element with the text: saving. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher
+expect(getByText(filteredTransaction.description)).toBeDefined();
+expect(getByText(filteredTransaction.amount)).toBeDefined();
