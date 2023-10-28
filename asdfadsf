@@ -10,6 +10,7 @@ const TransactionsPage = () => {
   const [error, setError] = useState(false);
   const [transactions, setTransactions] = useState({ transactions: [] });
   const [keyword, setKeyword] = useState('');
+  const [sortOrder, setSortOrder] = useState('asc');
 
   const fetchCustomerTransactions = async () => {
     try {
@@ -31,8 +32,22 @@ const TransactionsPage = () => {
     setKeyword(event.toLowerCase());
   };
 
+  const handleSort = (order) => {
+    setSortOrder(order);
+  };
+
+  const sortingTransactions = (order) => {
+    const transactionsOrder = transactions.transactions.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return order === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+    return transactionsOrder;
+  };
+
   const filteredTransaction = () => {
-    return transactions.transactions.filter(
+    const sortingTransactionsOrder = sortingTransactions(sortOrder);
+    return sortingTransactionsOrder.filter(
       (transaction) => transaction.description.toLowerCase().includes(keyword) || transaction.amount.toString().includes(keyword)
     );
   };
@@ -45,8 +60,8 @@ const TransactionsPage = () => {
         </div>
       )}
       <h2 className="text-white">Transactions</h2>
-      <div className="d-flex gap-5">
-        <TransactionsSearch handleSearchTransaction={handleSearchTransaction} />
+      <div className="d-flex flex-column gap-5">
+        <TransactionsSearch handleSearchTransaction={handleSearchTransaction} handleSortingOrder={handleSort} />
       </div>
 
       {isLoading ? (
