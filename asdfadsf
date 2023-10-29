@@ -1,17 +1,20 @@
- <form className="bg-success">
-    <div className="mb-1">
+<form className="bg-success d-flex flex-column align-items-center">
+    <div className="mb-3">
       <label htmlFor="exampleInputEmail1" className="form-label">
-        Email address
-        <input type="email" className="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" />
+        Description
+        <input type="email" className="form-control" style={{ width: 300 }} id="exampleInputEmail1" aria-describedby="emailHelp" />
       </label>
     </div>
-    <div className="mb-1">
-      <label htmlFor="exampleInputPassword1" className="form-label">
-        Password
-        <input type="password" className="form-control" id="exampleInputPassword1" />
+    <div className="input-group mb-3">
+      <label className="input-group-text" htmlFor="transaction-type">
+        Transaction Type
+        <select className="form-select" id="transaction-type">
+          <option value="withdraw">Withdraw</option>
+          <option value="deposit">Deposit</option>
+        </select>
       </label>
     </div>
     <button type="submit" className="btn btn-primary">
-      Submit
+      Add Transaction
     </button>
   </form>
