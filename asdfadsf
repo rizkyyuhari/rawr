@@ -1,9 +1,53 @@
-background: hsla(210, 90%, 80%, 1);
+import PropTypes from 'prop-types';
 
-background: linear-gradient(90deg, hsla(210, 90%, 80%, 1) 0%, hsla(212, 93%, 49%, 1) 100%);
+const TransactionsSearch = ({ handleSearchTransaction, handleSortingOrder, hanldeSortOption }) => {
+  const handleSearchTextChange = (event) => {
+    handleSearchTransaction(event.target.value);
+  };
 
-background: -moz-linear-gradient(90deg, hsla(210, 90%, 80%, 1) 0%, hsla(212, 93%, 49%, 1) 100%);
+  const handelSortingOrderChange = (event) => {
+    handleSortingOrder(event.target.value);
+  };
 
-background: -webkit-linear-gradient(90deg, hsla(210, 90%, 80%, 1) 0%, hsla(212, 93%, 49%, 1) 100%);
+  const handleSortOptionChange = (event) => {
+    hanldeSortOption(event.target.value);
+  };
 
-filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#9FCCFA", endColorstr="#0974F1", GradientType=1 );
+  return (
+    <>
+      <div className="input-group mb-3">
+        <span className="input-group-text" id="basic-addon1">
+          Search By Description or Amount
+        </span>
+        <input onChange={handleSearchTextChange} type="text" className="form-control" data-testid="search-input" />
+      </div>
+      <div className="input-group mb-3">
+        <label className="input-group-text" htmlFor="sorting-order">
+          Sorting Order
+          <select className="form-select" id="sorting-order" onChange={handelSortingOrderChange}>
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </label>
+      </div>
+      <div className="input-group mb-3">
+        <label className="input-group-text" htmlFor="sorting-transaction-by">
+          Sorting By
+          <select className="form-select" id="sorting-transaction-by" onChange={handleSortOptionChange}>
+            <option value="date">Date</option>
+            <option value="description">Description</option>
+            <option value="amount">Amount</option>
+          </select>
+        </label>
+      </div>
+    </>
+  );
+};
+
+TransactionsSearch.propTypes = {
+  handleSearchTransaction: PropTypes.func.isRequired,
+  handleSortingOrder: PropTypes.func.isRequired,
+  hanldeSortOption: PropTypes.func.isRequired
+};
+
+export default TransactionsSearch;
