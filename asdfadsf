@@ -1,113 +1,97 @@
-import { useState } from 'react';
-import PropTypes from 'prop-types';
+ini custom hook untuk axios get
+import axios from 'axios';
+import { useEffect, useState } from 'react';
 
-const RADIX_NUMBER = 10;
-const TransactionForm = ({ handleAddTransaction }) => {
-  const initialTransaction = { description: '', amount: '', type: 'withdraw' };
-  const [transaction, setTransaction] = useState(initialTransaction);
-  const handleInputChange = (event) => {
-    setTransaction({ ...transaction, [event.target.name]: event.target.value });
+const useAxiosGet = (url, format) => {
+  const dataFormat = format;
+  const [data, setData] = useState(dataFormat);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState();
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(url);
+      setData(response.data);
+    } catch (errorFetch) {
+      setError(errorFetch);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const onSubmitHandler = async () => {
-    const convertedTransaction = {
-      ...transaction,
-      amount: parseInt(transaction.amount, RADIX_NUMBER)
-    };
-    setTransaction(initialTransaction);
-    await handleAddTransaction(convertedTransaction);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return {
+    data,
+    isLoading,
+    error,
+    fetchData
   };
+};
+
+export default useAxiosGet;
+
+ini file ewallepage:
+import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { API_URL, CUSTOMER_ID } from '../../config';
+import useAxiosGet from '../../hooks/useAxiosGet';
+import Customer from './Customer';
+// new Intl.NumberFormat(['ban', 'id']).format(balance)
+const EWalletPage = () => {
+  const navigate = useNavigate();
+  const { data, error, isLoading } = useAxiosGet(`${API_URL}/customers/${CUSTOMER_ID}`, { name: '', balance: 0 });
+
+  const filteredCustomerData = { ...data, balance:  new Intl.NumberFormat(['ban', 'id']).format(data.balance) };
+
   return (
-    <form className="text-white mb-5 p-4 d-flex flex-column align-items-center border" onSubmit={onSubmitHandler}>
-      <div className="mb-3">
-        <label htmlFor="transaction-description" className="form-label">
-          Description
-          <input
-            onChange={handleInputChange}
-            type="text"
-            maxLength="30"
-            className="form-control"
-            style={{ width: 300 }}
-            id="transaction-description"
-            aria-describedby="transactionDescription"
-            name="description"
-          />
-        </label>
+    <div className="container d-flex flex-column align-items-center justify-content-center p-4 min-vh-100 ">
+      <div className="container d-flex flex-column align-items-center p-4">
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            Oopss, Something Went Wrong!
+          </div>
+        )}
+        {isLoading ? (
+          <div className="spinner-border text-primary" data-testid="loader">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        ) : (
+          <Customer customer={filteredCustomerData} />
+        )}
       </div>
-      <div className="mb-3">
-        <label htmlFor="transaction-amount" className="form-label">
-          Amount
-          <input
-            onChange={handleInputChange}
-            type="number"
-            name="amount"
-            className="form-control"
-            style={{ width: 300 }}
-            id="transaction-amount"
-            aria-describedby="transactionAmount"
-          />
-        </label>
-      </div>
-      <div className="mb-3">
-        <label className="input-group-text" htmlFor="transaction-type">
-          Transaction Type
-          <select className="form-select" name="type" id="transaction-type" onChange={handleInputChange} value={transaction.type}>
-            <option value="withdraw">Withdraw</option>
-            <option value="deposit">Deposit</option>
-          </select>
-        </label>
-      </div>
-      <button type="submit" className="btn btn-primary">
-        Add Transaction
+      <button type="button" onClick={() => navigate('/wallets/transactions')}>
+        Transaction History
       </button>
-    </form>
+    </div>
   );
 };
 
-TransactionForm.propTypes = {
-  handleAddTransaction: PropTypes.func.isRequired
+export default EWalletPage;
+
+ini file Customer.jsx
+import PropTypes from 'prop-types';
+
+const Customer = ({ customer }) => (
+  <div className="custom-color-card-detail card-detail w-50 rounded p-3 mb-5">
+    <h2 className="mb-4">{`Hello, ${customer.name}`}</h2>
+    <p>Your Balance</p>
+    <h3>{`$${customer.balance}`}</h3>
+  </div>
+);
+
+Customer.propTypes = {
+  customer: PropTypes.shape({
+    balance: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired
+  }).isRequired
 };
 
-export default TransactionForm;
+export default Customer;
 
-
-import userEvent from '@testing-library/user-event';
-import { render } from '@testing-library/react';
-import TransactionForm from '../../../src/pages/TransactionsPage/TransactionForm';
-
-const mockHandleAddTransaction = jest.fn();
-describe('TransactionForm', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-  it('should trigger handler submit once when user inputted new transaction', async () => {
-    const { getByLabelText, getByRole } = render(
-      <TransactionForm
-        handleAddTransaction={mockHandleAddTransaction}
-      />
-    );
-    const user = userEvent.setup();
-    const descriptionInput = getByLabelText('Description');
-    const amountInput = getByLabelText('Amount');
-    const selectType = getByLabelText('Transaction Type');
-    const addTransactionButton = getByRole('button', { name: 'Add Transaction' });
-    const description = 'buat beli rumah';
-    const amount = 50968;
-    const type = 'deposit';
-
-    await user.type(descriptionInput, description);
-    await user.type(amountInput, `${amount}`);
-    await user.selectOptions(selectType, type);
-    await user.click(addTransactionButton);
-
-    expect(mockHandleAddTransaction).toHaveBeenNthCalledWith(
-      1,
-      {
-        description,
-        amount,
-        type
-      }
-    );
-  });
-});
-kenapa ada error     Error: Not implemented: HTMLFormElement.prototype.requestSubmit
+  const filteredCustomerData = { ...data, balance:  new Intl.NumberFormat(['ban', 'id']).format(data.balance) };
+<Customer customer={filteredCustomerData} /> nah dibagian sini kenapa dia nampilin nan ya?, bagaimana biar dia ga nan dan bisa diconvert balancenya
