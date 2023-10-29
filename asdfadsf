@@ -1,78 +1,17 @@
-/* eslint-disable max-len */
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { API_URL, WALLET_ID } from '../../config';
-import TransactionList from './TransactionList';
-import TransactionsSearch from './TransactionsSearch';
-
-const TransactionsPage = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const [transactions, setTransactions] = useState({ transactions: [] });
-  const [keyword, setKeyword] = useState('');
-  const [sortOrder, setSortOrder] = useState('asc');
-
-  const fetchCustomerTransactions = async () => {
-    try {
-      setIsLoading(true);
-      const response = await axios.get(`${API_URL}/wallets/${WALLET_ID}/transactions`);
-      setTransactions(response.data);
-    } catch (errorFetch) {
-      setError(errorFetch);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomerTransactions();
-  }, []);
-
-  const handleSearchTransaction = (event) => {
-    setKeyword(event.toLowerCase());
-  };
-
-  const handleSort = (order) => {
-    setSortOrder(order);
-  };
-
-  const sortingTransactions = (order) => {
-    const transactionsOrder = transactions.transactions.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return order === 'asc' ? dateA - dateB : dateB - dateA;
-    });
-    return transactionsOrder;
-  };
-
-  const filteredTransaction = () => {
-    const sortingTransactionsOrder = sortingTransactions(sortOrder);
-    return sortingTransactionsOrder.filter(
-      (transaction) => transaction.description.toLowerCase().includes(keyword) || transaction.amount.toString().includes(keyword)
-    );
-  };
-
-  return (
-    <div className="container d-flex flex-column p-4 min-vh-100 ">
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          Oopss, Something Went Wrong!
-        </div>
-      )}
-      <h2 className="text-white">Transactions</h2>
-      <div className="d-flex flex-column gap-5">
-        <TransactionsSearch handleSearchTransaction={handleSearchTransaction} handleSortingOrder={handleSort} />
-      </div>
-
-      {isLoading ? (
-        <div className="spinner-border text-primary" data-testid="loader">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      ) : (
-        <TransactionList transactions={filteredTransaction()} />
-      )}
+ <form className="bg-success">
+    <div className="mb-1">
+      <label htmlFor="exampleInputEmail1" className="form-label">
+        Email address
+        <input type="email" className="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" />
+      </label>
     </div>
-  );
-};
-
-export default TransactionsPage;
+    <div className="mb-1">
+      <label htmlFor="exampleInputPassword1" className="form-label">
+        Password
+        <input type="password" className="form-control" id="exampleInputPassword1" />
+      </label>
+    </div>
+    <button type="submit" className="btn btn-primary">
+      Submit
+    </button>
+  </form>
