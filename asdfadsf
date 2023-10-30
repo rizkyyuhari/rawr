@@ -1,53 +1,85 @@
-import PropTypes from 'prop-types';
+const news = [
+  {
+    id: 1,
+    categoryId: 2,
+    category: 'Sport',
+    title: 'Ronaldo kick the ball',
+    imageUrl:
+      'https://ichef.bbci.co.uk/news/1024/branded_news/17C79/production/_107510479_compositehuntjohnson.jpg',
+    publishedAt: '2019-06-24T03:15:58Z',
+    description:
+      'Jeremy Hunt has urged Tory leadership rival Boris Johnson not to be "a coward" about facing public scrutiny.\n\nMr Hunt said he was "not interested" in his private life but he should "man up" and debate with him on TV this week.\n\nMeanwhile, Mr Johnson has warned the UK will face a "democratic explosion" if it does not leave the EU by 31 October.\n\nBut Mr Hunt challenged him to reveal whether he would call a general election if MPs refused to allow the UK to leave without a deal on that date.\n\nAfter Prime Minister Theresa May failed to get her Brexit deal through Parliament earlier this year, the date of the UK\'s departure for the EU was moved to 31 October.\n\n\'Attacks\'\nMr Johnson is under pressure to answer questions about a row with his partner in the early hours of Friday which led to police being called to his London home.\n\nThe Metropolitan Police has said it will not be taking any further action over the incident and his supporters have rallied around him. Former International Development Secretary Priti Patel told BBC Radio 4\'s Today programme a recording of the argument, given to the Guardian newspaper, was part of a "politically-motivated series of attacks".\n\n"That is not the type of behaviour that you\'d expect in our country, that\'s the type of behaviour associated with the old Eastern bloc," she added.\n\nMr Johnson refused to answer questions about the incident at a hustings event on Saturday, instead insisting his stance on Brexit was what mattered to the public and to the Conservative Party members who will choose the next leader.'
+  },
+  {
+    id: 2,
+    categoryId: 5,
+    category: 'Headline',
+    title: 'India tent collapse kills 14, injures 50',
+    imageUrl:
+      'https://ichef.bbci.co.uk/news/1024/branded_news/D6E3/production/_107511055_hi054844261.jpg',
+    publishedAt: '2019-06-24T02:40:33Z',
+    description:
+      'At least 14 people were killed and more than 50 injured when heavy rain and strong winds caused a huge tent to collapse in the Indian state of Rajasthan on Sunday.\n\nSome were electrocuted by live wires as the tent caved in, and others killed by falling debris, Reuters reported.\n\nSome 300 people had gathered inside the tent for a religious event, the Hindustan Times newspaper reported.\n\nThe collapse took place in the Barmer district of the north-western state. The state\'s disaster management and relief minister Bhanwar Lal Meghwal questioned why organisers had not switched off the power supply in view of the wet weather.\n\nAn investigation has been launched into the incident.\n\nIndia\'s Prime Minister Narendra Modi called the incident "unfortunate" in a tweet on Sunday, saying his thoughts were "with the bereaved families".'
+  }
+];
 
-const TransactionsSearch = ({ handleSearchTransaction, handleSortingOrder, hanldeSortOption }) => {
-  const handleSearchTextChange = (event) => {
-    handleSearchTransaction(event.target.value);
-  };
+export default news;
 
-  const handelSortingOrderChange = (event) => {
-    handleSortingOrder(event.target.value);
-  };
+import { FlatList, SafeAreaView, ScrollView, StyleSheet } from 'react-native';
+import News from './News';
+import news from "../../newsData"
 
-  const handleSortOptionChange = (event) => {
-    hanldeSortOption(event.target.value);
-  };
-
+const NewsScreen = () => {
   return (
-    <>
-      <div className="input-group mb-3">
-        <span className="input-group-text" id="basic-addon1">
-          Search By Description or Amount
-        </span>
-        <input onChange={handleSearchTextChange} type="text" className="form-control" data-testid="search-input" />
-      </div>
-      <div className="input-group mb-3">
-        <label className="input-group-text" htmlFor="sorting-order">
-          Sorting Order
-          <select className="form-select" id="sorting-order" onChange={handelSortingOrderChange}>
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </select>
-        </label>
-      </div>
-      <div className="input-group mb-3">
-        <label className="input-group-text" htmlFor="sorting-transaction-by">
-          Sorting By
-          <select className="form-select" id="sorting-transaction-by" onChange={handleSortOptionChange}>
-            <option value="date">Date</option>
-            <option value="description">Description</option>
-            <option value="amount">Amount</option>
-          </select>
-        </label>
-      </div>
-    </>
+    <SafeAreaView>
+      <FlatList
+        contentContainerStyle={styles.scrollView}
+        data={news}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <News
+            imageUrl={item.imageUrl}
+            description={item.description}
+            category={item.category}
+          />
+        )}
+      />
+    </SafeAreaView>
   );
 };
 
-TransactionsSearch.propTypes = {
-  handleSearchTransaction: PropTypes.func.isRequired,
-  handleSortingOrder: PropTypes.func.isRequired,
-  hanldeSortOption: PropTypes.func.isRequired
+const styles = StyleSheet.create({
+  scrollView: {
+    width: '100%',
+    alignItems: 'center'
+  }
+});
+
+export default NewsScreen;
+import { View, Text, Image, StyleSheet } from 'react-native';
+
+const News = ({ description, imageUrl, category }) => {
+  return (
+    <View style={styles.containerCard}>
+      <Image source={{uri: imageUrl}} style={{ width: '100%', height: 200 }} />
+      <Text style={styles.description}>{category}</Text>
+      <Text>{description}</Text>
+    </View>
+  );
 };
 
-export default TransactionsSearch;
+const styles = StyleSheet.create({
+  containerCard: {
+    borderWidth: 2,
+    padding: 5,
+    width: '90%',
+    marginBottom: 10
+  },
+  description: {
+    marginTop: 10,
+    fontSize: 20,
+    fontWeight: 'bold'
+  }
+});
+
+export default News;
