@@ -1,10 +1,16 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+const groupedData = data.reduce((result, item) => {
+  const date = item.date;
+  if (!result[date]) {
+    result[date] = {
+      tickers: []
+    };
+  }
+  result[date].tickers.push({ ticker: item.ticker });
+  return result;
+}, {});
 
-dotenv.config();
-const mongooseUri = 'mongodb://localhost:27017/crypto-wises';
-const database = async () => {
-  await mongoose.connect(mongooseUri);
-};
-
-export default database;
+// Mengonversi objek grup menjadi array
+const transformed = Object.values(groupedData).map(item => ({
+  date: item.date,
+  tickers: item.tickers
+}));
