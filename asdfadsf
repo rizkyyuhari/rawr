@@ -1,11 +1,12 @@
-const transformed = portfolios.reduce((result, item) => {
-  const date = item.date;
-  const group = result.find(group => group.date === date);
-  if (group) {
-    group.tickers.push(item);
-  } else {
-    result.push({date, tickers: [item]});
-  }
+const transformed = Object.values(
+  portfolios.reduce((result, item) => {
+    const date = item.date;
 
-  return result;
-}, []);
+    if (!result[date]) {
+      result[date] = {date, tickers: []};
+    }
+    result[date].tickers.push(item);
+
+    return result;
+  }, {}),
+);
