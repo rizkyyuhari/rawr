@@ -1,16 +1,15 @@
-const groupedData = data.reduce((result, item) => {
-  const date = item.date;
-  if (!result[date]) {
-    result[date] = {
-      tickers: []
-    };
+const portfolios = [
+  {
+    ticker: {
+      name: 'Bitcoin',
+      ticker: 'BTC',
+      description:
+        'Bitcoin is a decentralized digital currency. Bitcoin transactions are verified by network nodes through cryptography and recorded in a public distributed ledger called a blockchain. The cryptocurrency was invented in 2008 by an unknown entity under the name Satoshi Nakamoto.',
+      id: '65460cc7e174e81823ac62f5'
+    },
+    amount: 1,
+    customer: '65460cc7e174e81823ac62f4',
+    id: '65460cc7e174e81823ac62f7',
+    date: '2023-11-04T09:14:10.944Z'
   }
-  result[date].tickers.push({ ticker: item.ticker });
-  return result;
-}, {});
-
-// Mengonversi objek grup menjadi array
-const transformed = Object.values(groupedData).map(item => ({
-  date: item.date,
-  tickers: item.tickers
-}));
+];
