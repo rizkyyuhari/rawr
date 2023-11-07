@@ -1,12 +1,30 @@
-const transformed = Object.values(
-  portfolios.reduce((result, item) => {
-    const date = item.date;
+import { Outlet, useNavigate } from 'react-router-dom';
+import './styles/LayoutPage.css';
+import { useEffect, useState } from 'react';
+import { CircularProgress } from '@mui/material';
+import Sidebar from './Sidebar';
 
-    if (!result[date]) {
-      result[date] = {date, tickers: []};
-    }
-    result[date].tickers.push(item);
+const LayoutPage = () => {
+  const [loader, setIsLoader] = useState(false);
+  const navigate = useNavigate();
 
-    return result;
-  }, {}),
-);
+  useEffect(() => {
+    setIsLoader(true);
+    console.log(loader);
+    navigate('/login');
+  }, []);
+
+  if (loader) {
+    return <CircularProgress />;
+  }
+  return (
+    <div className="layout">
+      <Sidebar />
+      <div className="content">
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+
+export default LayoutPage;
