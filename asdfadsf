@@ -1,32 +1,64 @@
-import { Outlet, useNavigate } from 'react-router-dom';
-import './styles/LayoutPage.css';
-import { useEffect, useState } from 'react';
-import { CircularProgress } from '@mui/material';
-import Sidebar from './Sidebar';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import './App.css';
+import appRoutes from './appRoutes';
 
-const LayoutPage = () => {
-  const [loader, setIsLoader] = useState(false);
-  const navigate = useNavigate();
-  useEffect(() => {
-    setIsLoader(true);
-    navigate('/login');
-    return () => {
-      setIsLoader(false);
-    };
-  }, []);
+const router = createBrowserRouter(appRoutes);
 
-  if (loader) {
-    return <CircularProgress />;
+const App = () => <RouterProvider router={router} />;
+
+export default App;
+
+
+appRoutes :
+import GuardComponent from './components/GuardComponent';
+import HomePage from './pages/HomePage/HomePage';
+import LayoutPage from './pages/LayoutPage/LayoutPage';
+import LoginPage from './pages/LoginPage/LoginPage';
+import PortfolioPage from './pages/PortfolioPage/PortfolioPage';
+
+const appRoutes = [
+  {
+    path: '/',
+    element: <GuardComponent />,
+    children: [
+      {
+        path: '/',
+        element: <LayoutPage />,
+        children: [
+          {
+            path: '/',
+            element: <HomePage />
+          },
+          {
+            path: '/portfolio',
+            element: <PortfolioPage />
+          }
+        ]
+      }
+    ]
+  },
+  {
+    path: '/login',
+    element: <LoginPage />
   }
+];
 
-  return (
-    <div className="layout">
-      <Sidebar />
-      <div className="content">
-        <Outlet />
-      </div>
-    </div>
-  );
+export default appRoutes;
+
+
+GuardComponent : 
+import { Navigate, Outlet } from 'react-router';
+import { PropTypes } from 'prop-types';
+
+const GuardComponent = ({ children }) => {
+  const token = JSON.parse(localStorage.getItem('login'));
+
+  if (!token) return <Navigate to="/login" replace />;
+  return children || <Outlet />;
 };
 
-export default LayoutPage;
+GuardComponent.propTypes = {
+  children: PropTypes.node.isRequired
+};
+
+export default GuardComponent;
