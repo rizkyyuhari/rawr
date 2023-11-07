@@ -7,16 +7,18 @@ import Sidebar from './Sidebar';
 const LayoutPage = () => {
   const [loader, setIsLoader] = useState(false);
   const navigate = useNavigate();
-
   useEffect(() => {
     setIsLoader(true);
-    console.log(loader);
     navigate('/login');
+    return () => {
+      setIsLoader(false);
+    };
   }, []);
 
   if (loader) {
     return <CircularProgress />;
   }
+
   return (
     <div className="layout">
       <Sidebar />
