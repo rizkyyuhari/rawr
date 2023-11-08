@@ -1,4 +1,4 @@
-ini LoginPage :
+ini loginpage : 
 import { CircularProgress } from '@mui/material';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
@@ -6,11 +6,16 @@ import { useNavigate } from 'react-router-dom';
 import LoginForm from './LoginForm';
 
 const LoginPage = () => {
+  const [errorLogin, setErrorLogin] = useState('');
   const navigate = useNavigate();
   const handleLogin = async (customer) => {
-    const response = await axios.post('http://localhost:8000/tokens', customer);
-    localStorage.setItem('login', response.data.token);
-    navigate('/');
+    try {
+      const response = await axios.post('http://localhost:8000/tokens', customer);
+      localStorage.setItem('login', response.data.token);
+      navigate('/');
+    } catch (error) {
+      setErrorLogin(error);
+    }
   };
 
   return (
@@ -33,61 +38,7 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-ini Kodingan LoginForm: import { useState } from 'react';
-import { TextField } from '@mui/material';
-import PropTypes from 'prop-types';
-
-const LoginForm = ({ handleLogin }) => {
-  const [form, setForm] = useState({ username: '', password: '' });
-  const hanlderInputChange = (e) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-  };
-
-  const handleSubmit = async () => {
-    await handleLogin(form);
-  };
-
-  return (
-    <div className="flex flex-1 flex-col items-center gap-5">
-      <h1 className="text-3xl font-bold text-black">Welcome Back!</h1>
-      <h1 className="mb-10 text-black">Please enter your details</h1>
-      <TextField
-        className="mw-10 mb-10 w-96"
-        id="outlined-username-input"
-        label="Username"
-        type="text"
-        autoComplete="current-password"
-        name="username"
-        onChange={hanlderInputChange}
-      />
-      <TextField
-        className="mt-10 w-96"
-        id="outlined-password-input"
-        label="Password"
-        type="password"
-        autoComplete="current-password"
-        name="password"
-        onChange={hanlderInputChange}
-      />
-      <button
-        className="w-96 rounded-3xl bg-cw-blue py-4 transition-opacity hover:opacity-70"
-        type="button"
-        onClick={handleSubmit}
-      >
-        Log in
-      </button>
-    </div>
-  );
-};
-
-LoginForm.propTypes = {
-  handleLogin: PropTypes.func.isRequired
-};
-
-export default LoginForm;
-
-LoginPage.test.jsx
+ini loginpage test: 
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '@testing-library/react';
 import LoginPage from '@src/pages/LoginPage/LoginPage';
@@ -133,21 +84,17 @@ describe('LoginPage', () => {
     const username = 'rizky';
     const password = 'test123';
 
-    const { portfolios, priceHistories, transactions } = profitAndLossData;
-    axios.get
-      .mockResolvedValueOnce({ data: { priceHistories } })
-      .mockResolvedValueOnce({ data: { transactions } })
-      .mockResolvedValueOnce({ data: { portfolios } });
-
     await userEvent.type(usernameInput, username);
     await userEvent.type(passwordInput, password);
     await customer.click(loginButton);
 
     await waitFor(() => {
-      screen.logTestingPlaygroundURL();
       expect(getByText('Home Page')).toBeInTheDocument();
     });
   });
-}); nah ini testnya kenapa error Unable to find an element with the text: Home Page. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
-jadi udah di click   await customer.click(loginButton); seharusnya navigate ke /, tapi ga navigate ke /, malah masih nampilin halaman /login, kira" kenapa
+});
+kenapa malah error di   await waitFor(() => {
+      expect(getByText('Home Page')).toBeInTheDocument();
+    }); unable to find an element with the text: Home Page. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible
 
+kenapa dia ga pindah ke  route / saat di click await customer.click(loginButton);
