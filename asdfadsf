@@ -1,64 +1,153 @@
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
-import './App.css';
-import appRoutes from './appRoutes';
+ini LoginPage :
+import { CircularProgress } from '@mui/material';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import LoginForm from './LoginForm';
 
-const router = createBrowserRouter(appRoutes);
+const LoginPage = () => {
+  const navigate = useNavigate();
+  const handleLogin = async (customer) => {
+    const response = await axios.post('http://localhost:8000/tokens', customer);
+    localStorage.setItem('login', response.data.token);
+    navigate('/');
+  };
 
-const App = () => <RouterProvider router={router} />;
-
-export default App;
-
-
-appRoutes :
-import GuardComponent from './components/GuardComponent';
-import HomePage from './pages/HomePage/HomePage';
-import LayoutPage from './pages/LayoutPage/LayoutPage';
-import LoginPage from './pages/LoginPage/LoginPage';
-import PortfolioPage from './pages/PortfolioPage/PortfolioPage';
-
-const appRoutes = [
-  {
-    path: '/',
-    element: <GuardComponent />,
-    children: [
-      {
-        path: '/',
-        element: <LayoutPage />,
-        children: [
-          {
-            path: '/',
-            element: <HomePage />
-          },
-          {
-            path: '/portfolio',
-            element: <PortfolioPage />
-          }
-        ]
-      }
-    ]
-  },
-  {
-    path: '/login',
-    element: <LoginPage />
-  }
-];
-
-export default appRoutes;
-
-
-GuardComponent : 
-import { Navigate, Outlet } from 'react-router';
-import { PropTypes } from 'prop-types';
-
-const GuardComponent = ({ children }) => {
-  const token = JSON.parse(localStorage.getItem('login'));
-
-  if (!token) return <Navigate to="/login" replace />;
-  return children || <Outlet />;
+  return (
+    <div className="flex flex-1 flex-row justify-between text-white">
+      <div className=" flex flex-1 flex-col items-center justify-center gap-5 bg-cw-lightblue py-14 max-md:bg-cw-signinpurple">
+        <div>
+          <img
+            src="../../src/assets/cryptoWiseLogo.png"
+            alt="cryptowiselogo"
+            className="mb-20 h-20 w-20 max-md:mb-5"
+          />
+        </div>
+        <LoginForm handleLogin={handleLogin} />
+      </div>
+      <div className="flex flex-1 items-center justify-center bg-cw-signinpurple max-md:hidden">
+        <img alt="security" src="../../src/assets/security.png" className="max-h-96" />
+      </div>
+    </div>
+  );
 };
 
-GuardComponent.propTypes = {
-  children: PropTypes.node.isRequired
+export default LoginPage;
+ini Kodingan LoginForm: import { useState } from 'react';
+import { TextField } from '@mui/material';
+import PropTypes from 'prop-types';
+
+const LoginForm = ({ handleLogin }) => {
+  const [form, setForm] = useState({ username: '', password: '' });
+  const hanlderInputChange = (e) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+  };
+
+  const handleSubmit = async () => {
+    await handleLogin(form);
+  };
+
+  return (
+    <div className="flex flex-1 flex-col items-center gap-5">
+      <h1 className="text-3xl font-bold text-black">Welcome Back!</h1>
+      <h1 className="mb-10 text-black">Please enter your details</h1>
+      <TextField
+        className="mw-10 mb-10 w-96"
+        id="outlined-username-input"
+        label="Username"
+        type="text"
+        autoComplete="current-password"
+        name="username"
+        onChange={hanlderInputChange}
+      />
+      <TextField
+        className="mt-10 w-96"
+        id="outlined-password-input"
+        label="Password"
+        type="password"
+        autoComplete="current-password"
+        name="password"
+        onChange={hanlderInputChange}
+      />
+      <button
+        className="w-96 rounded-3xl bg-cw-blue py-4 transition-opacity hover:opacity-70"
+        type="button"
+        onClick={handleSubmit}
+      >
+        Log in
+      </button>
+    </div>
+  );
 };
 
-export default GuardComponent;
+LoginForm.propTypes = {
+  handleLogin: PropTypes.func.isRequired
+};
+
+export default LoginForm;
+
+LoginPage.test.jsx
+import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor } from '@testing-library/react';
+import LoginPage from '@src/pages/LoginPage/LoginPage';
+import { MemoryRouter } from 'react-router-dom';
+import axios from 'axios';
+import profitAndLossData from '../../fixtures/profitAndLossData';
+
+jest.mock('axios', () => ({
+  post: jest.fn(),
+  get: jest.fn()
+}));
+
+describe('LoginPage', () => {
+  it('should display login form with username input password input and button sign in', async () => {
+    const { getByText, getByLabelText, getAllByRole } = render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    screen.logTestingPlaygroundURL();
+
+    expect(getByText('Log in')).toBeDefined();
+    expect(getByText('Welcome Back!')).toBeDefined();
+    expect(getByText('Please enter your details')).toBeDefined();
+    expect(getByLabelText('Password')).toBeDefined();
+    expect(getByLabelText('Username')).toBeDefined();
+    expect(getAllByRole('img')).toBeDefined();
+  });
+
+  it('should navigate to dashboard with route / when customer succesfully login', async () => {
+    const response = { data: { token: 'validToken' } };
+    axios.post.mockResolvedValue(response);
+    const { getByText, getByLabelText, getByRole } = render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+    const customer = userEvent.setup();
+    const usernameInput = getByLabelText('Username');
+    const passwordInput = getByLabelText('Password');
+    const loginButton = getByRole('button', { name: 'Log in' });
+    const username = 'rizky';
+    const password = 'test123';
+
+    const { portfolios, priceHistories, transactions } = profitAndLossData;
+    axios.get
+      .mockResolvedValueOnce({ data: { priceHistories } })
+      .mockResolvedValueOnce({ data: { transactions } })
+      .mockResolvedValueOnce({ data: { portfolios } });
+
+    await userEvent.type(usernameInput, username);
+    await userEvent.type(passwordInput, password);
+    await customer.click(loginButton);
+
+    await waitFor(() => {
+      screen.logTestingPlaygroundURL();
+      expect(getByText('Home Page')).toBeInTheDocument();
+    });
+  });
+}); nah ini testnya kenapa error Unable to find an element with the text: Home Page. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+jadi udah di click   await customer.click(loginButton); seharusnya navigate ke /, tapi ga navigate ke /, malah masih nampilin halaman /login, kira" kenapa
+
