@@ -1,100 +1,91 @@
-ini loginpage : 
-import { CircularProgress } from '@mui/material';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import LoginForm from './LoginForm';
+ini codingan authenticationservice : import jwt from 'jsonwebtoken';
+import IncorrectCredentialError from '../errors/IncorrectCredentialError';
 
-const LoginPage = () => {
-  const [errorLogin, setErrorLogin] = useState('');
-  const navigate = useNavigate();
-  const handleLogin = async (customer) => {
-    try {
-      const response = await axios.post('http://localhost:8000/tokens', customer);
-      localStorage.setItem('login', response.data.token);
-      navigate('/');
-    } catch (error) {
-      setErrorLogin(error);
+export default class AuthenticationService {
+  #customer;
+
+  constructor(customer) {
+    this.#customer = customer;
+  }
+
+  async authenticateCustomer(userAccount) {
+    const { username, password } = userAccount;
+    const existingUser = await this.#customer.findOne({ username, password });
+    if (!existingUser) {
+      return IncorrectCredentialError();
     }
+    const { JWT_SECRET, JWT_EXPIRATION } = process.env;
+    const payload = JSON.parse(JSON.stringify(existingUser));
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
+    return { token };
+  }
+}
+
+
+incorrect error :
+import HttpStatus from 'http-status-codes';
+
+class IncorrectCredentialError extends Error {
+  #statusCodes;
+
+  constructor() {
+    super('Username and/or password is incorrect');
+    this.#statusCodes = HttpStatus.BAD_REQUEST;
+  }
+
+  get httpStatus() {
+    return this.#statusCodes;
+  }
+}
+
+export default IncorrectCredentialError;
+
+
+
+
+
+
+
+import jwt from 'jsonwebtoken';
+import IncorrectCredentialError from '../../src/errors/IncorrectCredentialError';
+import AuthenticationService from '../../src/services/AuthenticationService';
+
+jest.mock('jsonwebtoken');
+
+describe('AuthenticationService', () => {
+  const mockCustomer = {
+    findOne: jest.fn()
   };
+  describe('^authenticateUser', () => {
+    it('should search a user with given username and password, sign JWT token and return the token when user exists in database', async () => {
+      const foundUser = {
+        username: 'test',
+        password: '123456'
+      };
+      const mockToken = 'token';
+      mockCustomer.findOne.mockReturnValue(foundUser);
+      jwt.sign.mockReturnValue(mockToken);
+      const expectedResult = { token: mockToken };
+      const authenticationService = new AuthenticationService(mockCustomer);
 
-  return (
-    <div className="flex flex-1 flex-row justify-between text-white">
-      <div className=" flex flex-1 flex-col items-center justify-center gap-5 bg-cw-lightblue py-14 max-md:bg-cw-signinpurple">
-        <div>
-          <img
-            src="../../src/assets/cryptoWiseLogo.png"
-            alt="cryptowiselogo"
-            className="mb-20 h-20 w-20 max-md:mb-5"
-          />
-        </div>
-        <LoginForm handleLogin={handleLogin} />
-      </div>
-      <div className="flex flex-1 items-center justify-center bg-cw-signinpurple max-md:hidden">
-        <img alt="security" src="../../src/assets/security.png" className="max-h-96" />
-      </div>
-    </div>
-  );
-};
+      const actualResult = await authenticationService.authenticateCustomer(expectedResult);
 
-export default LoginPage;
-ini loginpage test: 
-import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '@testing-library/react';
-import LoginPage from '@src/pages/LoginPage/LoginPage';
-import { MemoryRouter } from 'react-router-dom';
-import axios from 'axios';
-import profitAndLossData from '../../fixtures/profitAndLossData';
+      expect(actualResult).toEqual(expectedResult);
+    });
 
-jest.mock('axios', () => ({
-  post: jest.fn(),
-  get: jest.fn()
-}));
+    it('should not sign JWT token and throw error when given user does not exist in database', async () => {
+      const customer = {
+        username: 'test',
+        password: '123456'
+      };
+      mockCustomer.findOne.mockResolvedValue(null);
+      const expectedError = new IncorrectCredentialError();
+      const authenticationService = new AuthenticationService(mockCustomer);
+      const actualResult = () => authenticationService.authenticateCustomer(customer);
 
-describe('LoginPage', () => {
-  it('should display login form with username input password input and button sign in', async () => {
-    const { getByText, getByLabelText, getAllByRole } = render(
-      <MemoryRouter>
-        <LoginPage />
-      </MemoryRouter>
-    );
-
-    screen.logTestingPlaygroundURL();
-
-    expect(getByText('Log in')).toBeDefined();
-    expect(getByText('Welcome Back!')).toBeDefined();
-    expect(getByText('Please enter your details')).toBeDefined();
-    expect(getByLabelText('Password')).toBeDefined();
-    expect(getByLabelText('Username')).toBeDefined();
-    expect(getAllByRole('img')).toBeDefined();
-  });
-
-  it('should navigate to dashboard with route / when customer succesfully login', async () => {
-    const response = { data: { token: 'validToken' } };
-    axios.post.mockResolvedValue(response);
-    const { getByText, getByLabelText, getByRole } = render(
-      <MemoryRouter>
-        <LoginPage />
-      </MemoryRouter>
-    );
-    const customer = userEvent.setup();
-    const usernameInput = getByLabelText('Username');
-    const passwordInput = getByLabelText('Password');
-    const loginButton = getByRole('button', { name: 'Log in' });
-    const username = 'rizky';
-    const password = 'test123';
-
-    await userEvent.type(usernameInput, username);
-    await userEvent.type(passwordInput, password);
-    await customer.click(loginButton);
-
-    await waitFor(() => {
-      expect(getByText('Home Page')).toBeInTheDocument();
+      await expect(actualResult()).rejects.toThrowError(expectedError);
     });
   });
 });
-kenapa malah error di   await waitFor(() => {
-      expect(getByText('Home Page')).toBeInTheDocument();
-    }); unable to find an element with the text: Home Page. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible
 
-kenapa dia ga pindah ke  route / saat di click await customer.click(loginButton);
+kenapa error dibagian sini await expect(actualResult()).rejects.toThrowError(expectedError); dengan error "Cannot call a class as a function"
