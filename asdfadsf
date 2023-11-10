@@ -1,111 +1,27 @@
-ini login screen saya :import axios from 'axios';
-import React, { useState } from 'react';
-import { View, TextInput, Pressable, Image } from 'react-native';
-import CWText from '../../components/CWText';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import bcrypt from 'bcrypt';
+import { model, Schema } from 'mongoose';
+import { toJSONOptions } from './options';
 
-import PropTypes from 'prop-types';
+const customerSchema = Schema(
+  {
+    name: {
+      type: Schema.Types.String
+    },
+    username: {
+      type: Schema.Types.String
+    },
+    password: {
+      type: Schema.Types.String
+    }
+  },
+  {
+    timestamps: true
+  }
+);
 
-const LoginScreen = ({ navigation }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = async () => {
-    const response = await axios.post('http://localhost:8000/tokens', {
-      username,
-      password
-    });
-    console.log(response, 'response');
-    await EncryptedStorage.setItem('token', response.data.token);
-    navigation.replace('Authenticated');
-  };
-  return (
-    <View className="flex-1 bg-cw-signin">
-      <View className="w-full items-center h-72 justify-center gap-5">
-        <Image
-          accessibilityLabel="crypto-logo"
-          className="w-20 h-20"
-          source={require('../../assets/cryptoWiseLogo.png')}
-        />
-        <View>
-          <CWText className="text-xl text-black" fontWeight={700}>
-            Welcome Back!
-          </CWText>
-          <CWText className="text-l mb-5 text-black" fontWeight={100}>
-            Please enter your details
-          </CWText>
-        </View>
-      </View>
-      <View className="bg-white pl-20 m-5 rounded-xl p-10">
-        <TextInput
-          autoCapitalize="none"
-          maxLength={32}
-          accessibilityLabel="username-form"
-          className="bg-cw-textinput rounded-xl py-4 px-5 mb-3"
-          placeholder="Username"
-          value={username}
-          onChangeText={setUsername}
-        />
-        <TextInput
-          maxLength={32}
-          accessibilityLabel="password-form"
-          className="bg-cw-textinput rounded-xl py-4 px-5"
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        <Pressable
-          accessibilityLabel="login-button"
-          onPress={handleSubmit}
-          className="mt-5 bg-cw-blue py-3 rounded-xl">
-          <CWText className="text-center text-white font-bold">Log in</CWText>
-        </Pressable>
-      </View>
-    </View>
-  );
+customerSchema.set('toJSON', toJSONOptions);
+customerSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-LoginScreen.propTypes = {
-  navigation: PropTypes.shape({
-    replace: PropTypes.func.isRequired
-  })
-};
-export default LoginScreen;
-ini test login page sya :
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
-import LoginScreen from '../../../src/screens/LoginScreen/LoginScreen';
-import { useNavigation } from '@react-navigation/native';
-import EncryptedStorage from 'react-native-encrypted-storage';
-import axios from 'axios';
-
-jest.mock('react-native-encrypted-storage', () => ({
-  setItem: jest.fn()
-}));
-jest.mock('@react-navigation/native');
-
-jest.mock('axios', () => ({
-  post: jest.fn()
-}));
-
-describe('LoginScreen', () => {
-  it('should ', () => {
-    const customerName = 'rizky';
-    const password = '12345';
-    axios.post.mockResolvedValue({ data: { token: 'valid token' } });
-    EncryptedStorage.setItem.mockResolvedValue('token');
-    const mockReplace = jest.fn();
-    useNavigation.mockImplementation({ replace: mockReplace });
-    render(<LoginScreen />);
-    const button = screen.getByLabelText('login-button');
-    const usernameInput = screen.getByLabelText('username-form');
-    const passwordInput = screen.getByLabelText('password-form');
-
-    fireEvent.changeText(usernameInput, customerName);
-    fireEvent.changeText(passwordInput, password);
-    fireEvent.press(button);
-  });
-});
-
-nah gimana cara tangani error cannot read properties of undefined (reading 'replace')
+export default model('Customer', customerSchema, 'customer');
