@@ -1,27 +1,266 @@
-import bcrypt from 'bcrypt';
-import { model, Schema } from 'mongoose';
-import { toJSONOptions } from './options';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  View,
+  RefreshControl
+} from 'react-native';
+import CWText from '../../components/CWText';
+import DashboardLineChart from './DashboardLineChart';
+import DashboardProfile from './DashboardProfile';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import PropTypes from 'prop-types';
 
-const customerSchema = Schema(
-  {
-    name: {
-      type: Schema.Types.String
-    },
-    username: {
-      type: Schema.Types.String
-    },
-    password: {
-      type: Schema.Types.String
+import DashboardProfitDetailScreen from './DashboardProfitDetailScreen';
+import {
+  priceHistoriesURL,
+  transactionsURL,
+  portfoliosURL,
+  customerURL
+} from '../../config/config';
+import axios from 'axios';
+
+const DashboardScreen = ({ navigation }) => {
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  }, []);
+
+  const [pointDetail, setPointDetail] = useState();
+  const [chartData, setChartData] = useState({
+    graphData: [],
+    baseData: [],
+    customer: {},
+    balance: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const getEndDate = () => {
+    const endDate = new Date();
+    return endDate;
+  };
+
+  const getStartDate = () => {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    return startDate;
+  };
+
+  const getCustomerBalance = (data) => {
+    const IDR = 'IDR';
+    const rupiahTicker = data.tickers.find((ticker) => ticker.ticker === IDR);
+    return rupiahTicker?.amount;
+  };
+
+  const getTodayPortfolio = (portfolios) => {
+    return portfolios.find((portfolio) => {
+      return (
+        new Date(portfolio.date).toLocaleDateString() ===
+        new Date().toLocaleDateString()
+      );
+    });
+  };
+
+  const fetchData = useCallback(async () => {
+    const token = await EncryptedStorage.getItem('token');
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+
+    try {
+      setIsLoading(true);
+      setIsError(false);
+      const startDate = getStartDate();
+      const endDate = getEndDate();
+      const { data: customer } = await axios.get(customerURL, { headers });
+      const { data: portfolios } = await axios.get(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      );
+      const { data: priceHistories } = await axios.get(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      );
+      const { data: transactions } = await axios.get(transactionsURL, {
+        headers
+      });
+
+      const apiData = {
+        portfolios: portfolios.portfolios,
+        priceHistories: priceHistories.priceHistories,
+        transactions: transactions.transactions
+      };
+      const graphData = getGraphData(apiData);
+      const baseData = getBaseData(graphData);
+      const customerBalance = getCustomerBalance(
+        getTodayPortfolio(apiData.portfolios)
+      );
+      setChartData((data) => ({
+        ...data,
+        graphData: graphData,
+        baseData: baseData,
+        customer,
+        balance: customerBalance
+      }));
+    } catch (error) {
+      setErrorMessage('Oops, something wrong!');
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
-  },
-  {
-    timestamps: true
-  }
-);
+  }, [getBaseData, getGraphData]);
 
-customerSchema.set('toJSON', toJSONOptions);
-customerSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, onRefresh]);
+
+  const getGraphBalance = (portfolio, priceHistories, portfolioDate) => {
+    return portfolio.tickers
+      .map((ticker) => {
+        const price = priceHistories.find((priceHistory) => {
+          const priceDate = new Date(priceHistory.date).toLocaleDateString();
+          return (
+            portfolioDate === priceDate &&
+            priceHistory.ticker.ticker === ticker.ticker
+          );
+        });
+        return price?.price ? ticker.amount * price?.price : ticker.amount;
+      })
+      .reduce((total, tickerPrice) => total + tickerPrice, 0);
+  };
+
+  const getDate = (portfolio) => {
+    return new Date(portfolio.date).toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getTransactions = (transactions, portfolioDate) => {
+    return transactions.filter((transaction) => {
+      const transactionDate = new Date(transaction.date).toLocaleDateString();
+      return transactionDate === portfolioDate;
+    });
+  };
+
+  const getGraphData = useCallback((data) => {
+    const { priceHistories, portfolios, transactions } = data;
+    return portfolios.map((portfolio) => {
+      const portfolioDate = new Date(portfolio.date).toLocaleDateString();
+      return {
+        balance: getGraphBalance(portfolio, priceHistories, portfolioDate),
+        date: getDate(portfolio),
+        transactions: getTransactions(transactions, portfolioDate)
+      };
+    });
+  }, []);
+
+  const getBaseData = useCallback((data) => {
+    const newBaseData = [];
+
+    data.map((item, index) => {
+      newBaseData.push({
+        ...item,
+        balance: data[0].balance,
+        date: data[index].date
+      });
+    });
+
+    return newBaseData;
+  }, []);
+
+  const handleProfitDetailClick = (dataPoint) => {
+    dataPoint.map((point) => {
+      setPointDetail({
+        ...pointDetail,
+        balance: point.balance,
+        date: point.date,
+        transactions: point.transactions,
+        x: point._x,
+        y: point._y
+      });
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-cw-lightpurple">
+        <ActivityIndicator
+          accessibilityLabel="loader-activity"
+          size="large"
+          color="blue"
+        />
+      </View>
+    );
+  }
+
+  // if (errorMessage && isError) {
+  //   return (
+  //     <View className="flex-1 justify-center items-center bg-cw-lightpurple">
+  //       <CWText className="text-2xl text-center">{errorMessage}</CWText>
+  //     </View>
+  //   );
+  // }
+
+  const handleLogout = async () => {
+    await EncryptedStorage.removeItem('token');
+    navigation.replace('Login');
+  };
+
+  return (
+    <ScrollView
+      className="flex-1 min-w-full bg-cw-lightgrey"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }>
+      {errorMessage && isError ? (
+        <View className="flex-1 justify-center items-center bg-cw-lightpurple">
+          <CWText className="text-2xl text-center">{errorMessage}</CWText>
+        </View>
+      ) : (
+        <View className="flex-1 h-full" accessibilityLabel="Dashboard">
+          {chartData.graphData.length > 0 && (
+            <View>
+              <View className="px-6 justify-center flex-col">
+                <DashboardProfile
+                  customerData={chartData.customer}
+                  balance={chartData.balance}
+                />
+              </View>
+              <View accessibilityLabel="profit loss line chart">
+                <DashboardLineChart
+                  data={chartData.graphData}
+                  baseData={chartData.baseData}
+                  handleProfitDetailClick={handleProfitDetailClick}
+                />
+              </View>
+              {pointDetail ? (
+                <DashboardProfitDetailScreen pointDetail={pointDetail} />
+              ) : null}
+            </View>
+          )}
+          <Pressable className="items-center" onPress={handleLogout}>
+            <CWText className=" p-2 text-white bg-cw-purple">Logout</CWText>
+          </Pressable>
+        </View>
+      )}
+    </ScrollView>
+  );
 };
 
-export default model('Customer', customerSchema, 'customer');
+DashboardScreen.propTypes = {
+  navigation: PropTypes.shape({
+    replace: PropTypes.func.isRequired
+  })
+};
+
+export default DashboardScreen;
+kenapa kodingan ini ketika refresh kembali dengan refresh control dia tidak refresh data
