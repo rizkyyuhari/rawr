@@ -1,91 +1,111 @@
-ini codingan authenticationservice : import jwt from 'jsonwebtoken';
-import IncorrectCredentialError from '../errors/IncorrectCredentialError';
+ini login screen saya :import axios from 'axios';
+import React, { useState } from 'react';
+import { View, TextInput, Pressable, Image } from 'react-native';
+import CWText from '../../components/CWText';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
-export default class AuthenticationService {
-  #customer;
+import PropTypes from 'prop-types';
 
-  constructor(customer) {
-    this.#customer = customer;
-  }
+const LoginScreen = ({ navigation }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
-  async authenticateCustomer(userAccount) {
-    const { username, password } = userAccount;
-    const existingUser = await this.#customer.findOne({ username, password });
-    if (!existingUser) {
-      return IncorrectCredentialError();
-    }
-    const { JWT_SECRET, JWT_EXPIRATION } = process.env;
-    const payload = JSON.parse(JSON.stringify(existingUser));
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
-    return { token };
-  }
-}
-
-
-incorrect error :
-import HttpStatus from 'http-status-codes';
-
-class IncorrectCredentialError extends Error {
-  #statusCodes;
-
-  constructor() {
-    super('Username and/or password is incorrect');
-    this.#statusCodes = HttpStatus.BAD_REQUEST;
-  }
-
-  get httpStatus() {
-    return this.#statusCodes;
-  }
-}
-
-export default IncorrectCredentialError;
-
-
-
-
-
-
-
-import jwt from 'jsonwebtoken';
-import IncorrectCredentialError from '../../src/errors/IncorrectCredentialError';
-import AuthenticationService from '../../src/services/AuthenticationService';
-
-jest.mock('jsonwebtoken');
-
-describe('AuthenticationService', () => {
-  const mockCustomer = {
-    findOne: jest.fn()
+  const handleSubmit = async () => {
+    const response = await axios.post('http://localhost:8000/tokens', {
+      username,
+      password
+    });
+    console.log(response, 'response');
+    await EncryptedStorage.setItem('token', response.data.token);
+    navigation.replace('Authenticated');
   };
-  describe('^authenticateUser', () => {
-    it('should search a user with given username and password, sign JWT token and return the token when user exists in database', async () => {
-      const foundUser = {
-        username: 'test',
-        password: '123456'
-      };
-      const mockToken = 'token';
-      mockCustomer.findOne.mockReturnValue(foundUser);
-      jwt.sign.mockReturnValue(mockToken);
-      const expectedResult = { token: mockToken };
-      const authenticationService = new AuthenticationService(mockCustomer);
+  return (
+    <View className="flex-1 bg-cw-signin">
+      <View className="w-full items-center h-72 justify-center gap-5">
+        <Image
+          accessibilityLabel="crypto-logo"
+          className="w-20 h-20"
+          source={require('../../assets/cryptoWiseLogo.png')}
+        />
+        <View>
+          <CWText className="text-xl text-black" fontWeight={700}>
+            Welcome Back!
+          </CWText>
+          <CWText className="text-l mb-5 text-black" fontWeight={100}>
+            Please enter your details
+          </CWText>
+        </View>
+      </View>
+      <View className="bg-white pl-20 m-5 rounded-xl p-10">
+        <TextInput
+          autoCapitalize="none"
+          maxLength={32}
+          accessibilityLabel="username-form"
+          className="bg-cw-textinput rounded-xl py-4 px-5 mb-3"
+          placeholder="Username"
+          value={username}
+          onChangeText={setUsername}
+        />
+        <TextInput
+          maxLength={32}
+          accessibilityLabel="password-form"
+          className="bg-cw-textinput rounded-xl py-4 px-5"
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        <Pressable
+          accessibilityLabel="login-button"
+          onPress={handleSubmit}
+          className="mt-5 bg-cw-blue py-3 rounded-xl">
+          <CWText className="text-center text-white font-bold">Log in</CWText>
+        </Pressable>
+      </View>
+    </View>
+  );
+};
 
-      const actualResult = await authenticationService.authenticateCustomer(expectedResult);
+LoginScreen.propTypes = {
+  navigation: PropTypes.shape({
+    replace: PropTypes.func.isRequired
+  })
+};
+export default LoginScreen;
+ini test login page sya :
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import LoginScreen from '../../../src/screens/LoginScreen/LoginScreen';
+import { useNavigation } from '@react-navigation/native';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import axios from 'axios';
 
-      expect(actualResult).toEqual(expectedResult);
-    });
+jest.mock('react-native-encrypted-storage', () => ({
+  setItem: jest.fn()
+}));
+jest.mock('@react-navigation/native');
 
-    it('should not sign JWT token and throw error when given user does not exist in database', async () => {
-      const customer = {
-        username: 'test',
-        password: '123456'
-      };
-      mockCustomer.findOne.mockResolvedValue(null);
-      const expectedError = new IncorrectCredentialError();
-      const authenticationService = new AuthenticationService(mockCustomer);
-      const actualResult = () => authenticationService.authenticateCustomer(customer);
+jest.mock('axios', () => ({
+  post: jest.fn()
+}));
 
-      await expect(actualResult()).rejects.toThrowError(expectedError);
-    });
+describe('LoginScreen', () => {
+  it('should ', () => {
+    const customerName = 'rizky';
+    const password = '12345';
+    axios.post.mockResolvedValue({ data: { token: 'valid token' } });
+    EncryptedStorage.setItem.mockResolvedValue('token');
+    const mockReplace = jest.fn();
+    useNavigation.mockImplementation({ replace: mockReplace });
+    render(<LoginScreen />);
+    const button = screen.getByLabelText('login-button');
+    const usernameInput = screen.getByLabelText('username-form');
+    const passwordInput = screen.getByLabelText('password-form');
+
+    fireEvent.changeText(usernameInput, customerName);
+    fireEvent.changeText(passwordInput, password);
+    fireEvent.press(button);
   });
 });
 
-kenapa error dibagian sini await expect(actualResult()).rejects.toThrowError(expectedError); dengan error "Cannot call a class as a function"
+nah gimana cara tangani error cannot read properties of undefined (reading 'replace')
