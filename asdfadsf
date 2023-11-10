@@ -24,12 +24,12 @@ import axios from 'axios';
 const DashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
-  }, []);
+
+    await fetchData();
+    setRefreshing(false);
+  }, [fetchData]);
 
   const [pointDetail, setPointDetail] = useState();
   const [chartData, setChartData] = useState({
@@ -91,6 +91,8 @@ const DashboardScreen = ({ navigation }) => {
       const { data: transactions } = await axios.get(transactionsURL, {
         headers
       });
+      console.log(customer);
+      console.log(transactions);
 
       const apiData = {
         portfolios: portfolios.portfolios,
@@ -247,7 +249,10 @@ const DashboardScreen = ({ navigation }) => {
               ) : null}
             </View>
           )}
-          <Pressable className="items-center" onPress={handleLogout}>
+          <Pressable
+            accessibilityLabel="logout-button"
+            className="items-center"
+            onPress={handleLogout}>
             <CWText className=" p-2 text-white bg-cw-purple">Logout</CWText>
           </Pressable>
         </View>
@@ -263,4 +268,127 @@ DashboardScreen.propTypes = {
 };
 
 export default DashboardScreen;
-kenapa kodingan ini ketika refresh kembali dengan refresh control dia tidak refresh data
+
+
+import React from 'react';
+import axios from 'axios';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { when } from 'jest-when';
+import AuthenticatedNavigator from '../../src/navigator/AuthenticatedNavigator';
+import { portfoliosResponse } from '../fixturesFolder/portfolio';
+import { transactionsResponse } from '../fixturesFolder/transactions';
+import priceHistoriesResponse from '../fixturesFolder/priceHistory';
+import {
+  customerURL,
+  portfoliosURL,
+  priceHistoriesURL,
+  transactionsURL
+} from '../../src/config/config';
+import {} from 'victory-native';
+import customerData from '../fixturesFolder/customerData';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
+jest.mock('react-native-encrypted-storage', () => ({
+  getItem: jest.fn(),
+  removeItem: jest.fn()
+}));
+
+jest.mock('axios');
+jest.mock('victory-native', () => {
+  const originalModule = jest.requireActual('victory-native');
+
+  return {
+    ...originalModule,
+    VictoryVoronoiContainer: jest.fn(),
+    VictoryLabel: jest.fn(),
+    VictoryTheme: jest.fn(),
+    VictoryPie: jest.fn(),
+    VictoryTooltip: jest.fn()
+  };
+});
+describe('AuthenticatedNavigator', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.advanceTimersByTime(1);
+  });
+  afterEach(() => {
+    jest.resetAllMocks();
+    jest.useRealTimers();
+  });
+  it('should render Dashboard screen by default', async () => {
+    const token = 'token';
+    EncryptedStorage.getItem.mockResolvedValue(token);
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    when(axios.get)
+      .calledWith(customerURL, { headers })
+      .mockResolvedValue({ data: customerData })
+      .calledWith(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: portfoliosResponse })
+      .calledWith(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: priceHistoriesResponse })
+      .calledWith(transactionsURL, { headers })
+      .mockResolvedValue({ data: transactionsResponse });
+
+    render(
+      <NavigationContainer>
+        <AuthenticatedNavigator />
+      </NavigationContainer>
+    );
+
+    expect(await screen.findByLabelText('loader-activity'));
+
+    expect(EncryptedStorage.getItem).toHaveBeenNthCalledWith(1, 'token');
+  });
+
+  it('should render Dashboard screen by default', async () => {
+    const token = 'token';
+    EncryptedStorage.getItem.mockResolvedValue(token);
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    when(axios.get)
+      .calledWith(customerURL, { headers })
+      .mockResolvedValue({ data: customerData })
+      .calledWith(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: portfoliosResponse })
+      .calledWith(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: priceHistoriesResponse })
+      .calledWith(transactionsURL, { headers })
+      .mockResolvedValue({ data: transactionsResponse });
+
+    render(
+      <NavigationContainer>
+        <AuthenticatedNavigator />
+      </NavigationContainer>
+    );
+
+    const buttonLogout = await screen.findByLabelText('logout-button');
+
+    fireEvent.press(buttonLogout);
+
+    expect(EncryptedStorage.getItem).toHaveBeenNthCalledWith(1, 'token');
+  });
+});
+
+apa yang salah dalam testing nya saat     fireEvent.press(buttonLogout);, keluar navigation.replace is not a function
