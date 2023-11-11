@@ -1,3 +1,4 @@
+ini kodingan dashboard saya 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -268,12 +269,184 @@ DashboardScreen.propTypes = {
 };
 
 export default DashboardScreen;
+ini adalah kodingan authenticatenavigator :
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
+import TransactionHistoryScreen from '../screens/TransactionHistoryScreen/TransactionHistoryScreen';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import CWText from '../components/CWText';
+import DashboardScreen from '../screens/DashboardScreen/DashboardScreen';
+import MarketNavigator from './MarketNavigator';
+import PortfolioScreen from '../screens/PortfolioScreen/PortfolioScreen';
 
+const Tab = createBottomTabNavigator();
 
+const AuthenticatedNavigator = () => {
+  const iconColor = {
+    true: '#0300A2',
+    false: '#8D8DA6'
+  };
+
+  const labelColor = {
+    true: 'text-xs text-cw-blue',
+    false: 'text-xs text-cw-grey'
+  };
+
+  const renderDashboardLabel = (focused) => (
+    <CWText
+      className={labelColor[focused]}
+      fontWeight={500}
+      color={iconColor[focused]}>
+      Dashboard
+    </CWText>
+  );
+
+  const renderDashboardIcon = (focused) => (
+    <FontAwesome6 name="house" size={20} color={iconColor[focused]} />
+  );
+
+  const renderMarketLabel = (focused) => {
+    return (
+      <CWText
+        className={labelColor[focused]}
+        fontWeight={500}
+        color={iconColor[focused]}>
+        Market
+      </CWText>
+    );
+  };
+
+  const renderMarketIcon = (focused) => {
+    return <FontAwesome6 name="shop" size={20} color={iconColor[focused]} />;
+  };
+
+  const renderTransactionHistoryLabel = (focused) => {
+    return (
+      <CWText
+        className={labelColor[focused]}
+        fontWeight={500}
+        color={iconColor[focused]}>
+        History
+      </CWText>
+    );
+  };
+
+  const renderTransactionHistoryIcon = (focused) => {
+    return <FontAwesome name="history" size={20} color={iconColor[focused]} />;
+  };
+
+  const renderPortfolioLabel = (focused) => {
+    return (
+      <CWText
+        className={labelColor[focused]}
+        fontWeight={500}
+        color={iconColor[focused]}>
+        Portfolio
+      </CWText>
+    );
+  };
+
+  const renderPortfolioIcon = (focused) => {
+    return (
+      <FontAwesome6 name="chart-simple" size={20} color={iconColor[focused]} />
+    );
+  };
+
+  const tabScreensOptions = {
+    dashboardScreen: {
+      tabBarLabel: ({ focused }) => renderDashboardLabel(focused),
+      tabBarIcon: ({ focused }) => renderDashboardIcon(focused)
+    },
+    portfolioScreen: {
+      tabBarLabel: ({ focused }) => renderPortfolioLabel(focused),
+      tabBarIcon: ({ focused }) => renderPortfolioIcon(focused)
+    },
+    transactionHistoryScreen: {
+      tabBarLabel: ({ focused }) => renderTransactionHistoryLabel(focused),
+      tabBarIcon: ({ focused }) => renderTransactionHistoryIcon(focused)
+    },
+    marketScreen: {
+      tabBarLabel: ({ focused }) => renderMarketLabel(focused),
+      tabBarIcon: ({ focused }) => renderMarketIcon(focused)
+    }
+  };
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false
+      }}>
+      <Tab.Screen
+        name="DashboardScreen"
+        component={DashboardScreen}
+        options={tabScreensOptions.dashboardScreen}
+      />
+      <Tab.Screen
+        name="MarketNavigator"
+        component={MarketNavigator}
+        options={tabScreensOptions.marketScreen}
+      />
+      <Tab.Screen
+        name="History"
+        component={TransactionHistoryScreen}
+        options={tabScreensOptions.transactionHistoryScreen}
+      />
+      <Tab.Screen
+        name="PortfolioScreen"
+        component={PortfolioScreen}
+        options={tabScreensOptions.portfolioScreen}
+      />
+    </Tab.Navigator>
+  );
+};
+
+export default AuthenticatedNavigator;
+ini main navigator :import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import LoginScreen from '../screens/LoginScreen/LoginScreen';
+import SplashScreen from '../screens/SplashScreen/SplashScreen';
+import AuthenticatedNavigator from './AuthenticatedNavigator';
+
+const Stack = createNativeStackNavigator();
+
+const MainNavigator = () => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen
+        name="Authenticated"
+        component={AuthenticatedNavigator}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export default MainNavigator;
+main navigator baru dibungkus dengan Navigation container import { NavigationContainer } from '@react-navigation/native';
+import React from 'react';
+import { SafeAreaView } from 'react-native';
+import MainNavigator from './navigator/MainNavigator';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
+const App = () => {
+  return (
+    <SafeAreaView className="flex-1">
+      <NavigationContainer>
+        <MainNavigator />
+      </NavigationContainer>
+    </SafeAreaView>
+  );
+};
+
+export default App;
+nah ini testing authenticatedNavigator 
 import React from 'react';
 import axios from 'axios';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { render, screen } from '@testing-library/react-native';
 import { when } from 'jest-when';
 import AuthenticatedNavigator from '../../src/navigator/AuthenticatedNavigator';
 import { portfoliosResponse } from '../fixturesFolder/portfolio';
@@ -346,49 +519,10 @@ describe('AuthenticatedNavigator', () => {
         <AuthenticatedNavigator />
       </NavigationContainer>
     );
-
     expect(await screen.findByLabelText('loader-activity'));
 
     expect(EncryptedStorage.getItem).toHaveBeenNthCalledWith(1, 'token');
   });
-
-  it('should render Dashboard screen by default', async () => {
-    const token = 'token';
-    EncryptedStorage.getItem.mockResolvedValue(token);
-    const headers = {
-      Authorization: `Bearer ${token}`
-    };
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 6);
-    when(axios.get)
-      .calledWith(customerURL, { headers })
-      .mockResolvedValue({ data: customerData })
-      .calledWith(
-        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      )
-      .mockResolvedValue({ data: portfoliosResponse })
-      .calledWith(
-        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      )
-      .mockResolvedValue({ data: priceHistoriesResponse })
-      .calledWith(transactionsURL, { headers })
-      .mockResolvedValue({ data: transactionsResponse });
-
-    render(
-      <NavigationContainer>
-        <AuthenticatedNavigator />
-      </NavigationContainer>
-    );
-
-    const buttonLogout = await screen.findByLabelText('logout-button');
-
-    fireEvent.press(buttonLogout);
-
-    expect(EncryptedStorage.getItem).toHaveBeenNthCalledWith(1, 'token');
-  });
 });
-
-apa yang salah dalam testing nya saat     fireEvent.press(buttonLogout);, keluar navigation.replace is not a function
+nah malah ada warning  Warning: Failed prop type: The prop `navigation.replace` is marked as required in `DashboardScreen`, but its value is `undefined`.
+kenapa ya kira " kira, ini muncul ketika testing diatas
