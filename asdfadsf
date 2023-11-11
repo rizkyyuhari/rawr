@@ -1,528 +1,204 @@
-ini kodingan dashboard saya 
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  View,
-  RefreshControl
-} from 'react-native';
-import CWText from '../../components/CWText';
-import DashboardLineChart from './DashboardLineChart';
-import DashboardProfile from './DashboardProfile';
-import EncryptedStorage from 'react-native-encrypted-storage';
-import PropTypes from 'prop-types';
+homepage : 
+/* eslint-disable max-len */
 
-import DashboardProfitDetailScreen from './DashboardProfitDetailScreen';
 import {
-  priceHistoriesURL,
-  transactionsURL,
-  portfoliosURL,
-  customerURL
-} from '../../config/config';
+  useCallback, useContext, useEffect, useState
+} from 'react';
+import { CircularProgress } from '@mui/material';
 import axios from 'axios';
+import ErrorComponent from '@src/components/ErrorComponent';
+import { CustomerContext } from '@src/components/CustomerProvider';
+import ProfitAndLossView from './ProfitAndLossView';
+import HomePageProfile from './HomePageProfile';
 
-const DashboardScreen = ({ navigation }) => {
-  const [refreshing, setRefreshing] = React.useState(false);
+const BASE_URL = 'http://localhost:8000';
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
+const todaysDate = new Date();
+const params = {
+  dateTo: todaysDate,
+  dateFrom: new Date(todaysDate.getFullYear(), todaysDate.getMonth(), todaysDate.getDate() - 6)
+};
 
-    await fetchData();
-    setRefreshing(false);
-  }, [fetchData]);
-
-  const [pointDetail, setPointDetail] = useState();
-  const [chartData, setChartData] = useState({
-    graphData: [],
-    baseData: [],
-    customer: {},
+const HomePage = () => {
+  const { customerData } = useContext(CustomerContext);
+  const [data, setData] = useState({
+    finalData: [],
+    customer: customerData,
     balance: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
 
-  const getEndDate = () => {
-    const endDate = new Date();
-    return endDate;
-  };
-
-  const getStartDate = () => {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 6);
-    return startDate;
-  };
-
-  const getCustomerBalance = (data) => {
+  const getCustomerBalance = (item) => {
     const IDR = 'IDR';
-    const rupiahTicker = data.tickers.find((ticker) => ticker.ticker === IDR);
+    const rupiahTicker = item?.tickers.find((ticker) => ticker.ticker === IDR);
     return rupiahTicker?.amount;
   };
 
-  const getTodayPortfolio = (portfolios) => {
-    return portfolios.find((portfolio) => {
-      return (
-        new Date(portfolio.date).toLocaleDateString() ===
-        new Date().toLocaleDateString()
-      );
-    });
-  };
+  const getTodayPortfolio = (portfolios) => portfolios?.find(
+    (portfolio) => new Date(portfolio.date).toLocaleDateString() === new Date().toLocaleDateString()
+  );
 
-  const fetchData = useCallback(async () => {
-    const token = await EncryptedStorage.getItem('token');
-    const headers = {
-      Authorization: `Bearer ${token}`
-    };
-
-    try {
-      setIsLoading(true);
-      setIsError(false);
-      const startDate = getStartDate();
-      const endDate = getEndDate();
-      const { data: customer } = await axios.get(customerURL, { headers });
-      const { data: portfolios } = await axios.get(
-        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      );
-      const { data: priceHistories } = await axios.get(
-        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      );
-      const { data: transactions } = await axios.get(transactionsURL, {
-        headers
+  const getGraphBalance = (portfolio, priceHistories, portfolioDate) => portfolio.tickers
+    .map((ticker) => {
+      const price = priceHistories.find((priceHistory) => {
+        const priceDate = new Date(priceHistory.date).toLocaleDateString();
+        return portfolioDate === priceDate && priceHistory.ticker.ticker === ticker.ticker;
       });
-      console.log(customer);
-      console.log(transactions);
+      return price?.price ? ticker.amount * price.price : ticker.amount;
+    })
+    .reduce((total, tickerPrice) => total + tickerPrice, 0);
 
-      const apiData = {
-        portfolios: portfolios.portfolios,
-        priceHistories: priceHistories.priceHistories,
-        transactions: transactions.transactions
-      };
-      const graphData = getGraphData(apiData);
-      const baseData = getBaseData(graphData);
-      const customerBalance = getCustomerBalance(
-        getTodayPortfolio(apiData.portfolios)
-      );
-      setChartData((data) => ({
-        ...data,
-        graphData: graphData,
-        baseData: baseData,
-        customer,
-        balance: customerBalance
-      }));
-    } catch (error) {
-      setErrorMessage('Oops, something wrong!');
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getBaseData, getGraphData]);
+  const getTransactions = (transactions, portfolioDate) => transactions.filter((transaction) => {
+    const transactionDate = new Date(transaction.date).toLocaleDateString();
+    return transactionDate === portfolioDate;
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData, onRefresh]);
-
-  const getGraphBalance = (portfolio, priceHistories, portfolioDate) => {
-    return portfolio.tickers
-      .map((ticker) => {
-        const price = priceHistories.find((priceHistory) => {
-          const priceDate = new Date(priceHistory.date).toLocaleDateString();
-          return (
-            portfolioDate === priceDate &&
-            priceHistory.ticker.ticker === ticker.ticker
-          );
-        });
-        return price?.price ? ticker.amount * price?.price : ticker.amount;
-      })
-      .reduce((total, tickerPrice) => total + tickerPrice, 0);
-  };
-
-  const getDate = (portfolio) => {
-    return new Date(portfolio.date).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  const getTransactions = (transactions, portfolioDate) => {
-    return transactions.filter((transaction) => {
-      const transactionDate = new Date(transaction.date).toLocaleDateString();
-      return transactionDate === portfolioDate;
-    });
-  };
-
-  const getGraphData = useCallback((data) => {
-    const { priceHistories, portfolios, transactions } = data;
+  const getFinalData = useCallback((databaseData) => {
+    const { priceHistories, portfolios, transactions } = databaseData;
     return portfolios.map((portfolio) => {
       const portfolioDate = new Date(portfolio.date).toLocaleDateString();
       return {
         balance: getGraphBalance(portfolio, priceHistories, portfolioDate),
-        date: getDate(portfolio),
+        date: portfolio.date,
         transactions: getTransactions(transactions, portfolioDate)
       };
     });
   }, []);
 
-  const getBaseData = useCallback((data) => {
-    const newBaseData = [];
-
-    data.map((item, index) => {
-      newBaseData.push({
-        ...item,
-        balance: data[0].balance,
-        date: data[index].date
-      });
-    });
-
-    return newBaseData;
-  }, []);
-
-  const handleProfitDetailClick = (dataPoint) => {
-    dataPoint.map((point) => {
-      setPointDetail({
-        ...pointDetail,
-        balance: point.balance,
-        date: point.date,
-        transactions: point.transactions,
-        x: point._x,
-        y: point._y
-      });
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-cw-lightpurple">
-        <ActivityIndicator
-          accessibilityLabel="loader-activity"
-          size="large"
-          color="blue"
-        />
-      </View>
-    );
-  }
-
-  // if (errorMessage && isError) {
-  //   return (
-  //     <View className="flex-1 justify-center items-center bg-cw-lightpurple">
-  //       <CWText className="text-2xl text-center">{errorMessage}</CWText>
-  //     </View>
-  //   );
-  // }
-
-  const handleLogout = async () => {
-    await EncryptedStorage.removeItem('token');
-    navigation.replace('Login');
-  };
-
-  return (
-    <ScrollView
-      className="flex-1 min-w-full bg-cw-lightgrey"
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }>
-      {errorMessage && isError ? (
-        <View className="flex-1 justify-center items-center bg-cw-lightpurple">
-          <CWText className="text-2xl text-center">{errorMessage}</CWText>
-        </View>
-      ) : (
-        <View className="flex-1 h-full" accessibilityLabel="Dashboard">
-          {chartData.graphData.length > 0 && (
-            <View>
-              <View className="px-6 justify-center flex-col">
-                <DashboardProfile
-                  customerData={chartData.customer}
-                  balance={chartData.balance}
-                />
-              </View>
-              <View accessibilityLabel="profit loss line chart">
-                <DashboardLineChart
-                  data={chartData.graphData}
-                  baseData={chartData.baseData}
-                  handleProfitDetailClick={handleProfitDetailClick}
-                />
-              </View>
-              {pointDetail ? (
-                <DashboardProfitDetailScreen pointDetail={pointDetail} />
-              ) : null}
-            </View>
-          )}
-          <Pressable
-            accessibilityLabel="logout-button"
-            className="items-center"
-            onPress={handleLogout}>
-            <CWText className=" p-2 text-white bg-cw-purple">Logout</CWText>
-          </Pressable>
-        </View>
-      )}
-    </ScrollView>
-  );
-};
-
-DashboardScreen.propTypes = {
-  navigation: PropTypes.shape({
-    replace: PropTypes.func.isRequired
-  })
-};
-
-export default DashboardScreen;
-ini adalah kodingan authenticatenavigator :
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
-import TransactionHistoryScreen from '../screens/TransactionHistoryScreen/TransactionHistoryScreen';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import CWText from '../components/CWText';
-import DashboardScreen from '../screens/DashboardScreen/DashboardScreen';
-import MarketNavigator from './MarketNavigator';
-import PortfolioScreen from '../screens/PortfolioScreen/PortfolioScreen';
-
-const Tab = createBottomTabNavigator();
-
-const AuthenticatedNavigator = () => {
-  const iconColor = {
-    true: '#0300A2',
-    false: '#8D8DA6'
-  };
-
-  const labelColor = {
-    true: 'text-xs text-cw-blue',
-    false: 'text-xs text-cw-grey'
-  };
-
-  const renderDashboardLabel = (focused) => (
-    <CWText
-      className={labelColor[focused]}
-      fontWeight={500}
-      color={iconColor[focused]}>
-      Dashboard
-    </CWText>
-  );
-
-  const renderDashboardIcon = (focused) => (
-    <FontAwesome6 name="house" size={20} color={iconColor[focused]} />
-  );
-
-  const renderMarketLabel = (focused) => {
-    return (
-      <CWText
-        className={labelColor[focused]}
-        fontWeight={500}
-        color={iconColor[focused]}>
-        Market
-      </CWText>
-    );
-  };
-
-  const renderMarketIcon = (focused) => {
-    return <FontAwesome6 name="shop" size={20} color={iconColor[focused]} />;
-  };
-
-  const renderTransactionHistoryLabel = (focused) => {
-    return (
-      <CWText
-        className={labelColor[focused]}
-        fontWeight={500}
-        color={iconColor[focused]}>
-        History
-      </CWText>
-    );
-  };
-
-  const renderTransactionHistoryIcon = (focused) => {
-    return <FontAwesome name="history" size={20} color={iconColor[focused]} />;
-  };
-
-  const renderPortfolioLabel = (focused) => {
-    return (
-      <CWText
-        className={labelColor[focused]}
-        fontWeight={500}
-        color={iconColor[focused]}>
-        Portfolio
-      </CWText>
-    );
-  };
-
-  const renderPortfolioIcon = (focused) => {
-    return (
-      <FontAwesome6 name="chart-simple" size={20} color={iconColor[focused]} />
-    );
-  };
-
-  const tabScreensOptions = {
-    dashboardScreen: {
-      tabBarLabel: ({ focused }) => renderDashboardLabel(focused),
-      tabBarIcon: ({ focused }) => renderDashboardIcon(focused)
-    },
-    portfolioScreen: {
-      tabBarLabel: ({ focused }) => renderPortfolioLabel(focused),
-      tabBarIcon: ({ focused }) => renderPortfolioIcon(focused)
-    },
-    transactionHistoryScreen: {
-      tabBarLabel: ({ focused }) => renderTransactionHistoryLabel(focused),
-      tabBarIcon: ({ focused }) => renderTransactionHistoryIcon(focused)
-    },
-    marketScreen: {
-      tabBarLabel: ({ focused }) => renderMarketLabel(focused),
-      tabBarIcon: ({ focused }) => renderMarketIcon(focused)
-    }
-  };
-
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false
-      }}>
-      <Tab.Screen
-        name="DashboardScreen"
-        component={DashboardScreen}
-        options={tabScreensOptions.dashboardScreen}
-      />
-      <Tab.Screen
-        name="MarketNavigator"
-        component={MarketNavigator}
-        options={tabScreensOptions.marketScreen}
-      />
-      <Tab.Screen
-        name="History"
-        component={TransactionHistoryScreen}
-        options={tabScreensOptions.transactionHistoryScreen}
-      />
-      <Tab.Screen
-        name="PortfolioScreen"
-        component={PortfolioScreen}
-        options={tabScreensOptions.portfolioScreen}
-      />
-    </Tab.Navigator>
-  );
-};
-
-export default AuthenticatedNavigator;
-ini main navigator :import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
-import LoginScreen from '../screens/LoginScreen/LoginScreen';
-import SplashScreen from '../screens/SplashScreen/SplashScreen';
-import AuthenticatedNavigator from './AuthenticatedNavigator';
-
-const Stack = createNativeStackNavigator();
-
-const MainNavigator = () => {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Splash" component={SplashScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen
-        name="Authenticated"
-        component={AuthenticatedNavigator}
-        options={{ headerShown: false }}
-      />
-    </Stack.Navigator>
-  );
-};
-
-export default MainNavigator;
-main navigator baru dibungkus dengan Navigation container import { NavigationContainer } from '@react-navigation/native';
-import React from 'react';
-import { SafeAreaView } from 'react-native';
-import MainNavigator from './navigator/MainNavigator';
-import EncryptedStorage from 'react-native-encrypted-storage';
-
-const App = () => {
-  return (
-    <SafeAreaView className="flex-1">
-      <NavigationContainer>
-        <MainNavigator />
-      </NavigationContainer>
-    </SafeAreaView>
-  );
-};
-
-export default App;
-nah ini testing authenticatedNavigator 
-import React from 'react';
-import axios from 'axios';
-import { NavigationContainer } from '@react-navigation/native';
-import { render, screen } from '@testing-library/react-native';
-import { when } from 'jest-when';
-import AuthenticatedNavigator from '../../src/navigator/AuthenticatedNavigator';
-import { portfoliosResponse } from '../fixturesFolder/portfolio';
-import { transactionsResponse } from '../fixturesFolder/transactions';
-import priceHistoriesResponse from '../fixturesFolder/priceHistory';
-import {
-  customerURL,
-  portfoliosURL,
-  priceHistoriesURL,
-  transactionsURL
-} from '../../src/config/config';
-import {} from 'victory-native';
-import customerData from '../fixturesFolder/customerData';
-import EncryptedStorage from 'react-native-encrypted-storage';
-
-jest.mock('react-native-encrypted-storage', () => ({
-  getItem: jest.fn(),
-  removeItem: jest.fn()
-}));
-
-jest.mock('axios');
-jest.mock('victory-native', () => {
-  const originalModule = jest.requireActual('victory-native');
-
-  return {
-    ...originalModule,
-    VictoryVoronoiContainer: jest.fn(),
-    VictoryLabel: jest.fn(),
-    VictoryTheme: jest.fn(),
-    VictoryPie: jest.fn(),
-    VictoryTooltip: jest.fn()
-  };
-});
-describe('AuthenticatedNavigator', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.advanceTimersByTime(1);
-  });
-  afterEach(() => {
-    jest.resetAllMocks();
-    jest.useRealTimers();
-  });
-  it('should render Dashboard screen by default', async () => {
-    const token = 'token';
-    EncryptedStorage.getItem.mockResolvedValue(token);
+  const fetchData = useCallback(async () => {
+    const token = localStorage.getItem('login');
     const headers = {
       Authorization: `Bearer ${token}`
     };
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 6);
-    when(axios.get)
-      .calledWith(customerURL, { headers })
-      .mockResolvedValue({ data: customerData })
-      .calledWith(
-        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      )
-      .mockResolvedValue({ data: portfoliosResponse })
-      .calledWith(
-        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      )
-      .mockResolvedValue({ data: priceHistoriesResponse })
-      .calledWith(transactionsURL, { headers })
-      .mockResolvedValue({ data: transactionsResponse });
+    try {
+      setIsLoading(true);
+      setIsError(false);
+      const {
+        data: { priceHistories }
+      } = await axios.get(`${BASE_URL}/price-histories`, { params, headers });
+      const {
+        data: { transactions }
+      } = await axios.get(`${BASE_URL}/customers/${customerData.id}/transactions`, { headers });
+      const {
+        data: { portfolios }
+      } = await axios.get(`${BASE_URL}/customers/${customerData.id}/portfolio-histories`, {
+        params,
+        headers
+      });
 
-    render(
-      <NavigationContainer>
-        <AuthenticatedNavigator />
-      </NavigationContainer>
+      const apiData = {
+        portfolios,
+        priceHistories,
+        transactions
+      };
+      const customerBalance = getCustomerBalance(getTodayPortfolio(apiData.portfolios));
+      const finalData = getFinalData(apiData);
+      setData({
+        ...data,
+        finalData,
+        balance: customerBalance
+      });
+    } catch (error) {
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getFinalData]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center rounded-xl p-10 shadow-cw">
+        <CircularProgress data-testid="portfolio-loader" />
+      </div>
     );
-    expect(await screen.findByLabelText('loader-activity'));
+  }
 
-    expect(EncryptedStorage.getItem).toHaveBeenNthCalledWith(1, 'token');
-  });
+  if (isError) {
+    return <ErrorComponent />;
+  }
+
+  return (
+    <div className="container overflow-auto">
+      <p className="text-2xl font-bold">Home Page</p>
+      <HomePageProfile data={data.customer} balance={data.balance} />
+      <ProfitAndLossView data={data.finalData} />
+    </div>
+  );
+};
+
+export default HomePage;
+nah saya testing begini import userEvent from '@testing-library/user-event';
+import { render } from '@testing-library/react';
+import { createMemoryRouter, RouterProvider, MemoryRouter } from 'react-router-dom';
+import axios from 'axios';
+import appRoutes from '@src/appRoutes';
+import LoginPage from '@src/pages/LoginPage/LoginPage';
+import { CustomerProvider } from '@src/components/CustomerProvider';
+import mockLocalStorage from '../../mockLocalStorage';
+import profitAndLossData from '../../fixtures/profitAndLossData';
+import { decodedCustomer, token } from '../../fixtures/customer';
+
+jest.mock('axios', () => ({
+  post: jest.fn(),
+  get: jest.fn()
+}));
+
+Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
+
+beforeEach(() => {
+  jest.resetAllMocks();
 });
-nah malah ada warning  Warning: Failed prop type: The prop `navigation.replace` is marked as required in `DashboardScreen`, but its value is `undefined`.
-kenapa ya kira " kira, ini muncul ketika testing diatas
+describe('LoginPage', () => {
+  const createRouter = () =>
+    createMemoryRouter(appRoutes, {
+      initialEntries: ['/login'],
+      initialIndex: 0
+    });
+
+  it('should display login form with username input password input and button sign in', async () => {
+    const router = createRouter();
+    const { getByText, getByLabelText, getAllByRole } = render(<RouterProvider router={router} />);
+
+    expect(getByText('Log in')).toBeDefined();
+    expect(getByText('Welcome Back!')).toBeDefined();
+    expect(getByText('Please enter your details')).toBeDefined();
+    expect(getByLabelText('Password')).toBeDefined();
+    expect(getByLabelText('Username')).toBeDefined();
+    expect(getAllByRole('img')).toBeDefined();
+  });
+  it('should navigate to dashboard with route / when customer succesfully login', async () => {
+    const router = createRouter();
+    const response = { data: { token } };
+    const { portfolios, priceHistories, transactions } = profitAndLossData;
+    const customer = userEvent.setup();
+    const setCustomerDataMock = jest.fn();
+    axios.post.mockResolvedValue(response);
+    axios.get
+      .mockResolvedValueOnce({ data: { priceHistories } })
+      .mockResolvedValueOnce({ data: { transactions } })
+      .mockResolvedValueOnce({ data: { portfolios } });
+
+    const { findByText, getByLabelText, getByRole } = render(
+      <CustomerProvider value={{ decodedCustomer, setCustomerDataMock }}>
+        <RouterProvider router={router} />
+      </CustomerProvider>
+    );
+    const usernameInput = getByLabelText('Username');
+    const passwordInput = getByLabelText('Password');
+    const loginButton = getByRole('button', { name: 'Log in' });
+    const username = 'rizky';
+    const password = 'test123';
+    await userEvent.type(usernameInput, username);
+    await userEvent.type(passwordInput, password);
+    await customer.click(loginButton);
+
+    expect(await findByText('Home Page')).toBeDefined();
+  });
+
+});
+kenapa error Failed to create chart: can't acquire context from the given item
