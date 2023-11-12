@@ -1,176 +1,246 @@
-import React, { useMemo } from 'react';
-import {
-  Image,
-  View,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator
-} from 'react-native';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import CWText from '../../components/CWText';
-import PortfolioPieChart from './PortfolioPieChart';
-import tickerLogos from '../../assets/tickerLogos';
-import PortfolioList from './PortfolioList';
-import useAxiosGet from '../../hooks/useAxiosGet';
-import { CUSTOMER_API_URL, PRICE_HISTORY_API_URL } from '../../apiConfig';
-import convertToRupiah from '../../utils/convertToRupiah';
+import DashboardLineChart from './DashboardLineChart';
+import DashboardProfile from './DashboardProfile';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import PropTypes from 'prop-types';
 
-const PortfolioScreen = ({ navigation }) => {
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
+import DashboardProfitDetailScreen from './DashboardProfitDetailScreen';
+import {
+  priceHistoriesURL,
+  transactionsURL,
+  portfoliosURL,
+  customerURL
+} from '../../config/config';
+import axios from 'axios';
 
-  const {
-    data: portfoliosResponse,
-    isLoading: isLoadingPortfolios,
-    error: errorPortfolio
-  } = useAxiosGet(
-    `${CUSTOMER_API_URL}/6548e650b1c6cd04394bdf6c/portfolio-histories?dateFrom=${todayDate.toISOString()}`,
-    navigation
-  );
+const DashboardScreen = ({ navigation }) => {
+  const [pointDetail, setPointDetail] = useState();
+  const [chartData, setChartData] = useState({
+    graphData: [],
+    baseData: [],
+    customer: {},
+    balance: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  (async () => {
-    if (errorPortfolio) {
-      await EncryptedStorage.removeItem('token');
-      navigation.replace('Login');
-    }
-  })();
-  const {
-    data: priceHistoriesResponse,
-    isLoading: isLoadingPriceHistories,
-    error: errorPriceHistories
-  } = useAxiosGet(
-    `${PRICE_HISTORY_API_URL}?dateFrom=${todayDate.toISOString()}`
-  );
+  const getEndDate = () => {
+    return new Date();
+  };
 
-  const tickers = useMemo(() => {
-    return portfoliosResponse?.portfolios[0]?.tickers.filter(
-      (ticker) => ticker.ticker !== 'IDR'
-    );
-  }, [portfoliosResponse?.portfolios]);
+  const getStartDate = () => {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    return startDate;
+  };
 
-  const priceHistories = useMemo(() => {
-    return priceHistoriesResponse?.priceHistories;
-  }, [priceHistoriesResponse?.priceHistories]);
+  const getCustomerBalance = (data) => {
+    const IDR = 'IDR';
+    const rupiahTicker = data.tickers.find((ticker) => ticker.ticker === IDR);
+    return rupiahTicker?.amount;
+  };
 
-  const rupiahTicker = useMemo(() => {
-    const RUPIAH = 'IDR';
-    const rupiah = portfoliosResponse?.portfolios[0]?.tickers.find(
-      (ticker) => ticker.ticker === RUPIAH
-    );
-    return {
-      ticker: { ticker: rupiah?.ticker, name: 'Indonesian Rupiah' },
-      amount: rupiah?.amount,
-      price: 1
-    };
-  }, [portfoliosResponse?.portfolios]);
-
-  const portfolios = useMemo(() => {
-    return tickers?.map((ticker) => ({
-      ticker: {
-        ticker: ticker.ticker,
-        name: priceHistories?.find(
-          (priceHistory) => priceHistory.ticker.ticker === ticker.ticker
-        )?.ticker.name
-      },
-      amount: ticker.amount,
-      price: priceHistories?.find(
-        (priceHistory) => priceHistory.ticker.ticker === ticker.ticker
-      )?.price
-    }));
-  }, [priceHistories, tickers]);
-
-  const totalAssets = useMemo(() => {
-    if (portfolios && rupiahTicker) {
-      return [...portfolios, rupiahTicker].reduce(
-        (previousValue, currentValue) =>
-          previousValue + currentValue.price * currentValue.amount,
-        0
+  const getTodayPortfolio = (portfolios) => {
+    return portfolios.find((portfolio) => {
+      return (
+        new Date(portfolio.date).toLocaleDateString() ===
+        new Date().toLocaleDateString()
       );
-    }
-    return 0;
-  }, [portfolios, rupiahTicker]);
+    });
+  };
 
-  if (isLoadingPortfolios || isLoadingPriceHistories) {
+  const fetchData = useCallback(async () => {
+    const token = await EncryptedStorage.getItem('token');
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+
+    try {
+      setIsLoading(true);
+      setIsError(false);
+      const startDate = getStartDate();
+      const endDate = getEndDate();
+      const { data: customer } = await axios.get(customerURL, { headers });
+
+      const { data: portfolios } = await axios.get(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      );
+      const { data: priceHistories } = await axios.get(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      );
+      const { data: transactions } = await axios.get(transactionsURL, {
+        headers
+      });
+
+      const apiData = {
+        portfolios: portfolios.portfolios,
+        priceHistories: priceHistories.priceHistories,
+        transactions: transactions.transactions
+      };
+      const graphData = getGraphData(apiData);
+      const baseData = getBaseData(graphData);
+      const customerBalance = getCustomerBalance(
+        getTodayPortfolio(apiData.portfolios)
+      );
+      setChartData((data) => ({
+        ...data,
+        graphData: graphData,
+        baseData: baseData,
+        customer,
+        balance: customerBalance
+      }));
+    } catch (error) {
+      console.log('masuk ga sih ');
+      setErrorMessage('Oops, something wrong!');
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getBaseData, getGraphData]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  console.log('render');
+
+  const getGraphBalance = (portfolio, priceHistories, portfolioDate) => {
+    return portfolio.tickers
+      .map((ticker) => {
+        const price = priceHistories.find((priceHistory) => {
+          const priceDate = new Date(priceHistory.date).toLocaleDateString();
+          return (
+            portfolioDate === priceDate &&
+            priceHistory.ticker.ticker === ticker.ticker
+          );
+        });
+        return price?.price ? ticker.amount * price?.price : ticker.amount;
+      })
+      .reduce((total, tickerPrice) => total + tickerPrice, 0);
+  };
+
+  const getDate = (portfolio) => {
+    return new Date(portfolio.date).toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getTransactions = (transactions, portfolioDate) => {
+    return transactions.filter((transaction) => {
+      const transactionDate = new Date(transaction.date).toLocaleDateString();
+      return transactionDate === portfolioDate;
+    });
+  };
+
+  const getGraphData = useCallback((data) => {
+    const { priceHistories, portfolios, transactions } = data;
+    return portfolios.map((portfolio) => {
+      const portfolioDate = new Date(portfolio.date).toLocaleDateString();
+      return {
+        balance: getGraphBalance(portfolio, priceHistories, portfolioDate),
+        date: getDate(portfolio),
+        transactions: getTransactions(transactions, portfolioDate)
+      };
+    });
+  }, []);
+
+  const getBaseData = useCallback((data) => {
+    const newBaseData = [];
+
+    data.map((item, index) => {
+      newBaseData.push({
+        ...item,
+        balance: data[0].balance,
+        date: data[index].date
+      });
+    });
+
+    return newBaseData;
+  }, []);
+
+  const handleProfitDetailClick = (dataPoint) => {
+    dataPoint.map((point) => {
+      setPointDetail({
+        ...pointDetail,
+        balance: point.balance,
+        date: point.date,
+        transactions: point.transactions,
+        x: point._x,
+        y: point._y
+      });
+    });
+  };
+
+  if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View className="flex-1 justify-center items-center bg-cw-lightpurple">
         <ActivityIndicator
-          accessibilityLabel="portfolio loader"
+          accessibilityLabel="loader-activity"
           size="large"
-          color="#0300A2"
+          color="blue"
         />
       </View>
     );
   }
 
-  if (errorPortfolio || errorPriceHistories) {
+  if (errorMessage && isError) {
     return (
-      <View
-        accessibilityLabel="fetch portfolio error"
-        className="flex-1 items-center justify-center">
-        <CWText className="text-xl text-cw-blue" fontWeight={700}>
-          Something went wrong
-        </CWText>
-        <CWText className="text-base text-cw-blue" fontWeight={300}>
-          An unknown network error occurred
-        </CWText>
+      <View className="flex-1 justify-center items-center bg-cw-lightpurple">
+        <CWText className="text-2xl text-center">{errorMessage}</CWText>
       </View>
     );
   }
 
-  if (portfoliosResponse?.portfolios.length === 0) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <CWText className="text-xl text-cw-blue" fontWeight={700}>
-          No Portfolio Data
-        </CWText>
-      </View>
-    );
-  }
+  const handleLogout = async () => {
+    await EncryptedStorage.removeItem('token');
+    navigation.replace('Login');
+  };
 
   return (
-    <ScrollView
-      className="bg-cw-lightgrey px-5"
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}>
-      <View
-        accessibilityLabel="portfolio pie chart"
-        className="mt-[-20] items-center">
-        {portfolios && (
-          <PortfolioPieChart portfolios={[...portfolios, rupiahTicker]} />
+    <ScrollView className="flex-1 min-w-full bg-cw-lightgrey">
+      <View className="flex-1 h-full" accessibilityLabel="Dashboard">
+        {chartData.graphData.length > 0 && (
+          <View>
+            <View className="px-6 justify-center flex-col">
+              <DashboardProfile
+                customerData={chartData.customer}
+                balance={chartData.balance}
+              />
+            </View>
+            <View accessibilityLabel="profit loss line chart">
+              <DashboardLineChart
+                data={chartData.graphData}
+                baseData={chartData.baseData}
+                handleProfitDetailClick={handleProfitDetailClick}
+              />
+            </View>
+            {pointDetail ? (
+              <DashboardProfitDetailScreen pointDetail={pointDetail} />
+            ) : null}
+          </View>
         )}
-      </View>
-      <View className="mt-[-20]">
-        <CWText className="text-xl mb-3" fontWeight={700}>
-          My Portfolio
-        </CWText>
-        <CWText
-          className="text-lg mb-3"
-          fontWeight={700}>{`Total Assets: ${convertToRupiah(
-          totalAssets
-        )}`}</CWText>
-        <View className="flex-row py-2 px-3 mb-2 h-16 bg-white items-center rounded-xl">
-          <View className="flex-row p-2 items-center border-[1px] border-cw-grey rounded-full mr-5">
-            <Image source={tickerLogos.IDR} className="w-5 h-5" />
-          </View>
-          <View accessibilityLabel="rupiah balance" className="flex-1">
-            <CWText className="text-xs text-cw-purple" fontWeight={600}>
-              {rupiahTicker.ticker.name}
-            </CWText>
-            <CWText className="text-lg" fontWeight={800}>
-              {rupiahTicker.amount && convertToRupiah(rupiahTicker.amount)}
-            </CWText>
-          </View>
-        </View>
-        <PortfolioList portfolios={portfolios} />
+        <Pressable
+          accessibilityLabel="logout-button"
+          className="items-center"
+          onPress={handleLogout}>
+          <CWText className=" p-2 text-white bg-cw-purple">Logout</CWText>
+        </Pressable>
       </View>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1
-  }
-});
+DashboardScreen.propTypes = {
+  navigation: PropTypes.shape({
+    replace: PropTypes.func
+  })
+};
 
-export default PortfolioScreen;
+export default DashboardScreen;
