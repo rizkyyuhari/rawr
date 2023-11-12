@@ -483,3 +483,144 @@ DashboardScreen.propTypes = {
 export default DashboardScreen;
 
 
+
+/* eslint-disable testing-library/no-node-access */
+import React from 'react';
+import { render, screen, act } from '@testing-library/react-native';
+import DashboardScreen from '../../../src/screens/DashboardScreen/DashboardScreen';
+import axios from 'axios';
+import { when } from 'jest-when';
+import { portfoliosResponse } from '../../fixturesFolder/portfolio';
+import { transactionsResponse } from '../../fixturesFolder/transactions';
+import priceHistoriesResponse from '../../fixturesFolder/priceHistory';
+import {
+  customerURL,
+  portfoliosURL,
+  priceHistoriesURL,
+  transactionsURL
+} from '../../../src/config/config';
+import { VictoryVoronoiContainer } from 'victory-native';
+import { View } from 'react-native';
+import { pointDetail } from '../../fixturesFolder/pointDetail';
+import convertToRupiah from '../../../src/utils/convertToRupiah';
+import {
+  customerData,
+  decodedCustomer,
+  token
+} from '../../fixturesFolder/customerData';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { CustomerProvider } from '../../../src/components/CustomerProvider';
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn(),
+  navigation: jest.fn()
+}));
+
+jest.mock('axios', () => ({
+  get: jest.fn()
+}));
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn()
+}));
+
+jest.mock('react-native-encrypted-storage', () => ({
+  getItem: jest.fn()
+}));
+
+jest.mock('victory-native', () => {
+  const originalModule = jest.requireActual('victory-native');
+
+  return {
+    ...originalModule,
+    VictoryVoronoiContainer: jest.fn()
+  };
+});
+
+describe('DashboardScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+  });
+
+  it('should display text dashboard in dashboard route when app is running', async () => {
+    EncryptedStorage.getItem.mockResolvedValue(token);
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+    VictoryVoronoiContainer.mockImplementation(() => (
+      <View accessibilityLabel="container" />
+    ));
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    useFocusEffect.mockImplementationOnce((callback) => callback());
+    when(axios.get)
+      .calledWith(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: portfoliosResponse })
+      .calledWith(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: priceHistoriesResponse })
+      .calledWith(transactionsURL, { headers })
+      .mockResolvedValue({ data: transactionsResponse });
+    const setCustomerMock = jest.fn();
+    render(
+      <CustomerProvider value={{ decodedCustomer, setCustomerMock }}>
+        <DashboardScreen />
+      </CustomerProvider>
+    );
+
+    expect(await screen.findByLabelText('loader-activity')).toBeDefined();
+
+    const dashboardHeading = await screen.findByLabelText('Dashboard');
+
+    expect(dashboardHeading).toBeDefined();
+    expect(axios.get).toHaveBeenCalledTimes(3);
+
+    const profileContainer = await screen.findByLabelText('Account balance');
+    const username = screen.getByText(`Welcome, ${decodedCustomer.name}`);
+
+    expect(profileContainer).toBeDefined();
+    expect(username).toBeDefined();
+
+    const profitGraphContainer = screen.getByLabelText(
+      'profit loss line chart'
+    );
+
+    expect(profitGraphContainer).toBeDefined();
+
+    const mockVictoryContainer = VictoryVoronoiContainer.mock.calls[0][0];
+    const activatedMethod = mockVictoryContainer.onActivated;
+    const labelsMethod = mockVictoryContainer.labels;
+    const datum = {
+      balance: 58554004.9,
+      date: '07 Nov 2023',
+      transactions: []
+    };
+    const balanceTickFormatResult =
+      mockVictoryContainer.children[0].props.tickFormat(1000000);
+    const dateTickFormatResult =
+      mockVictoryContainer.children[1].props.tickFormat(datum.date);
+
+    await act(async () => {
+      activatedMethod([pointDetail]);
+    });
+    labelsMethod({
+      datum
+    });
+
+    expect(balanceTickFormatResult).toEqual('1M');
+    expect(dateTickFormatResult).toEqual('07 Nov');
+    expect(convertToRupiah(datum.balance)).toBeDefined();
+    expect(datum.date).toBeDefined();
+  });
+});
+
+
+
