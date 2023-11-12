@@ -1,35 +1,111 @@
-import { useCallback, useState } from 'react';
-import axios from 'axios';
-import { useFocusEffect } from '@react-navigation/native';
+ini kodingan Dashboard : import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import CWText from '../../components/CWText';
+import DashboardLineChart from './DashboardLineChart';
+import DashboardProfile from './DashboardProfile';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import PropTypes from 'prop-types';
 
-const useAxiosGet = (url, navigation) => {
-  const [data, setData] = useState();
-  const [error, setError] = useState();
+import DashboardProfitDetailScreen from './DashboardProfitDetailScreen';
+import {
+  priceHistoriesURL,
+  transactionsURL,
+  portfoliosURL,
+  customerURL
+} from '../../config/config';
+import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/core';
+
+const DashboardScreen = ({ navigation }) => {
+  const [pointDetail, setPointDetail] = useState();
+  const [chartData, setChartData] = useState({
+    graphData: [],
+    baseData: [],
+    customer: {},
+    balance: 0
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const getEndDate = () => {
+    return new Date();
+  };
+
+  const getStartDate = () => {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    return startDate;
+  };
+
+  const getCustomerBalance = (data) => {
+    const IDR = 'IDR';
+    const rupiahTicker = data.tickers.find((ticker) => ticker.ticker === IDR);
+    return rupiahTicker?.amount;
+  };
+
+  const getTodayPortfolio = (portfolios) => {
+    return portfolios.find((portfolio) => {
+      return (
+        new Date(portfolio.date).toLocaleDateString() ===
+        new Date().toLocaleDateString()
+      );
+    });
+  };
 
   const fetchData = useCallback(async () => {
     const token = await EncryptedStorage.getItem('token');
-
     const headers = {
       Authorization: `Bearer ${token}`
     };
 
     try {
       setIsLoading(true);
-      const response = await axios.get(url, { headers });
+      setIsError(false);
+      const startDate = getStartDate();
+      const endDate = getEndDate();
+      const { data: customer } = await axios.get(customerURL, { headers });
 
-      setData(response.data);
-    } catch (errorFetch) {
-      if (errorFetch?.response?.data?.message === 'Invalid Token') {
+      const { data: portfolios } = await axios.get(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      );
+      const { data: priceHistories } = await axios.get(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      );
+      const { data: transactions } = await axios.get(transactionsURL, {
+        headers
+      });
+
+      const apiData = {
+        portfolios: portfolios.portfolios,
+        priceHistories: priceHistories.priceHistories,
+        transactions: transactions.transactions
+      };
+      const graphData = getGraphData(apiData);
+      const baseData = getBaseData(graphData);
+      const customerBalance = getCustomerBalance(
+        getTodayPortfolio(apiData.portfolios)
+      );
+      setChartData((data) => ({
+        ...data,
+        graphData: graphData,
+        baseData: baseData,
+        customer,
+        balance: customerBalance
+      }));
+    } catch (error) {
+      if (error?.response?.data?.message === 'Invalid Token') {
         await EncryptedStorage.removeItem('token');
         navigation.replace('Login');
       }
-      setError(errorFetch);
+      setErrorMessage('Oops, something wrong!');
+      setIsError(true);
     } finally {
       setIsLoading(false);
     }
-  }, [url, navigation]);
+  }, [getBaseData, getGraphData, navigation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,12 +113,300 @@ const useAxiosGet = (url, navigation) => {
     }, [fetchData])
   );
 
-  return {
-    data,
-    error,
-    isLoading,
-    fetchData
+  const getGraphBalance = (portfolio, priceHistories, portfolioDate) => {
+    return portfolio.tickers
+      .map((ticker) => {
+        const price = priceHistories.find((priceHistory) => {
+          const priceDate = new Date(priceHistory.date).toLocaleDateString();
+          return (
+            portfolioDate === priceDate &&
+            priceHistory.ticker.ticker === ticker.ticker
+          );
+        });
+        return price?.price ? ticker.amount * price?.price : ticker.amount;
+      })
+      .reduce((total, tickerPrice) => total + tickerPrice, 0);
   };
+
+  const getDate = (portfolio) => {
+    return new Date(portfolio.date).toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getTransactions = (transactions, portfolioDate) => {
+    return transactions.filter((transaction) => {
+      const transactionDate = new Date(transaction.date).toLocaleDateString();
+      return transactionDate === portfolioDate;
+    });
+  };
+
+  const getGraphData = useCallback((data) => {
+    const { priceHistories, portfolios, transactions } = data;
+    return portfolios.map((portfolio) => {
+      const portfolioDate = new Date(portfolio.date).toLocaleDateString();
+      return {
+        balance: getGraphBalance(portfolio, priceHistories, portfolioDate),
+        date: getDate(portfolio),
+        transactions: getTransactions(transactions, portfolioDate)
+      };
+    });
+  }, []);
+
+  const getBaseData = useCallback((data) => {
+    const newBaseData = [];
+
+    data.map((item, index) => {
+      newBaseData.push({
+        ...item,
+        balance: data[0].balance,
+        date: data[index].date
+      });
+    });
+
+    return newBaseData;
+  }, []);
+
+  const handleProfitDetailClick = (dataPoint) => {
+    dataPoint.map((point) => {
+      setPointDetail({
+        ...pointDetail,
+        balance: point.balance,
+        date: point.date,
+        transactions: point.transactions,
+        x: point._x,
+        y: point._y
+      });
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-cw-lightpurple">
+        <ActivityIndicator
+          accessibilityLabel="loader-activity"
+          size="large"
+          color="blue"
+        />
+      </View>
+    );
+  }
+
+  if (errorMessage && isError) {
+    return (
+      <View className="flex-1 justify-center items-center bg-cw-lightpurple">
+        <CWText className="text-2xl text-center">{errorMessage}</CWText>
+      </View>
+    );
+  }
+
+  const handleLogout = async () => {
+    await EncryptedStorage.removeItem('token');
+    navigation.replace('Login');
+  };
+
+  return (
+    <ScrollView className="flex-1 min-w-full bg-cw-lightgrey">
+      <View className="flex-1 h-full" accessibilityLabel="Dashboard">
+        {chartData.graphData.length > 0 && (
+          <View>
+            <View className="px-6 justify-center flex-col">
+              <DashboardProfile
+                customerData={chartData.customer}
+                balance={chartData.balance}
+              />
+            </View>
+            <View accessibilityLabel="profit loss line chart">
+              <DashboardLineChart
+                data={chartData.graphData}
+                baseData={chartData.baseData}
+                handleProfitDetailClick={handleProfitDetailClick}
+              />
+            </View>
+            {pointDetail ? (
+              <DashboardProfitDetailScreen pointDetail={pointDetail} />
+            ) : null}
+          </View>
+        )}
+        <Pressable
+          accessibilityLabel="logout-button"
+          className="items-center"
+          onPress={handleLogout}>
+          <CWText className=" p-2 text-white bg-cw-purple">Logout</CWText>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
 };
 
-export default useAxiosGet;
+DashboardScreen.propTypes = {
+  navigation: PropTypes.shape({
+    replace: PropTypes.func
+  })
+};
+
+export default DashboardScreen;
+
+ini test kodingan : /* eslint-disable testing-library/no-node-access */
+import React from 'react';
+import { render, screen, act } from '@testing-library/react-native';
+import DashboardScreen from '../../../src/screens/DashboardScreen/DashboardScreen';
+import axios from 'axios';
+import { when } from 'jest-when';
+import { portfoliosResponse } from '../../fixturesFolder/portfolio';
+import { transactionsResponse } from '../../fixturesFolder/transactions';
+import priceHistoriesResponse from '../../fixturesFolder/priceHistory';
+import {
+  customerURL,
+  portfoliosURL,
+  priceHistoriesURL,
+  transactionsURL
+} from '../../../src/config/config';
+import { VictoryVoronoiContainer } from 'victory-native';
+import { View } from 'react-native';
+import { pointDetail } from '../../fixturesFolder/pointDetail';
+import convertToRupiah from '../../../src/utils/convertToRupiah';
+import customerData from '../../fixturesFolder/customerData';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { useFocusEffect } from '@react-navigation/native';
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn()
+}));
+
+jest.mock('axios', () => ({
+  get: jest.fn()
+}));
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn()
+}));
+
+jest.mock('react-native-encrypted-storage', () => ({
+  getItem: jest.fn()
+}));
+
+jest.mock('victory-native', () => {
+  const originalModule = jest.requireActual('victory-native');
+
+  return {
+    ...originalModule,
+    VictoryVoronoiContainer: jest.fn()
+  };
+});
+
+describe('DashboardScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+  });
+
+  it('should display text dashboard in dashboard route when app is running', async () => {
+    const token = 'token';
+    EncryptedStorage.getItem.mockResolvedValue(token);
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+    VictoryVoronoiContainer.mockImplementation(() => (
+      <View accessibilityLabel="container" />
+    ));
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    useFocusEffect.mockImplementationOnce((callback) => callback());
+    when(axios.get)
+      .calledWith(customerURL, { headers })
+      .mockResolvedValue({ data: customerData })
+      .calledWith(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: portfoliosResponse })
+      .calledWith(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
+        { headers }
+      )
+      .mockResolvedValue({ data: priceHistoriesResponse })
+      .calledWith(transactionsURL, { headers })
+      .mockResolvedValue({ data: transactionsResponse });
+    render(<DashboardScreen />);
+
+    const dashboardHeading = await screen.findByLabelText('Dashboard');
+
+    expect(dashboardHeading).toBeDefined();
+    expect(axios.get).toHaveBeenCalledTimes(4);
+
+    const profileContainer = await screen.findByLabelText('Account balance');
+    const username = screen.getByText(`Welcome, ${customerData.name}`);
+
+    expect(profileContainer).toBeDefined();
+    expect(username).toBeDefined();
+
+    const profitGraphContainer = screen.getByLabelText(
+      'profit loss line chart'
+    );
+
+    expect(profitGraphContainer).toBeDefined();
+
+    const mockVictoryContainer = VictoryVoronoiContainer.mock.calls[0][0];
+    const activatedMethod = mockVictoryContainer.onActivated;
+    const labelsMethod = mockVictoryContainer.labels;
+    const datum = {
+      balance: 58554004.9,
+      date: '07 Nov 2023',
+      transactions: []
+    };
+    const balanceTickFormatResult =
+      mockVictoryContainer.children[0].props.tickFormat(1000000);
+    const dateTickFormatResult =
+      mockVictoryContainer.children[1].props.tickFormat(datum.date);
+
+    await act(async () => {
+      activatedMethod([pointDetail]);
+    });
+    labelsMethod({
+      datum
+    });
+
+    expect(balanceTickFormatResult).toEqual('1M');
+    expect(dateTickFormatResult).toEqual('07 Nov');
+    expect(convertToRupiah(datum.balance)).toBeDefined();
+    expect(datum.date).toBeDefined();
+  });
+
+  it('should return error message when failed to fetch data from API', async () => {
+    const error = new Error('Oops, something wrong!');
+
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+
+    when(axios.get)
+      .calledWith(
+        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`
+      )
+      .mockResolvedValueOnce({ data: portfoliosResponse })
+      .calledWith(
+        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`
+      )
+      .mockResolvedValueOnce({ data: priceHistoriesResponse })
+      .calledWith(transactionsURL)
+      .mockRejectedValueOnce(error)
+      .calledWith(
+        `${customerURL}/portfolio-histories?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`
+      )
+      .mockResolvedValueOnce({ data: portfoliosResponse })
+      .calledWith(customerURL)
+      .mockResolvedValueOnce({ data: customerData });
+
+    render(<DashboardScreen />);
+    const dashboardHeading = screen.queryByLabelText('Dashboard');
+    const errorMessage = await screen.findByText(error.message);
+
+    expect(dashboardHeading).toBeNull();
+
+    expect(errorMessage).toBeDefined();
+  });
+}); kenapa error pada render dashboard Couldn't find a navigation object. Is your component inside NavigationContainer?
