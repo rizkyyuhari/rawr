@@ -1,4 +1,242 @@
-ini kodingan Dashboard : import React, { useCallback, useContext, useEffect, useState } from 'react';
+ini react native context
+import PropTypes from 'prop-types';
+import React, { createContext, useEffect, useMemo, useState } from 'react';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { Buffer } from 'buffer';
+
+const initialData = {
+  id: '',
+  username: '',
+  name: ''
+};
+
+const CustomerContext = createContext(initialData);
+
+const CustomerProvider = ({ children }) => {
+  const [customerData, setCustomerData] = useState(initialData);
+  const context = useMemo(
+    () => ({
+      customerData,
+      setCustomerData
+    }),
+    [customerData]
+  );
+
+  console.log(customerData);
+
+  const checkingToken = async () => {
+    const token = await EncryptedStorage.getItem('login');
+    if (token) {
+      const parts = token
+        .split('.')
+        .map((part) =>
+          Buffer.from(
+            part.replace(/-/g, '+').replace(/_/g, '/'),
+            'base64'
+          ).toString()
+        );
+      const decodedCustomer = JSON.parse(parts[1]);
+      console.log('decodedCustomer', decodedCustomer);
+      setCustomerData(decodedCustomer);
+    }
+  };
+
+  useEffect(() => {
+    checkingToken();
+  }, []);
+
+  return (
+    <CustomerContext.Provider value={context}>
+      {children}
+    </CustomerContext.Provider>
+  );
+};
+
+CustomerProvider.propTypes = {
+  children: PropTypes.node.isRequired
+};
+
+export { CustomerContext, CustomerProvider };
+
+ini authenticated navigator import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
+import TransactionHistoryScreen from '../screens/TransactionHistoryScreen/TransactionHistoryScreen';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import CWText from '../components/CWText';
+import DashboardScreen from '../screens/DashboardScreen/DashboardScreen';
+import MarketNavigator from './MarketNavigator';
+import PortfolioScreen from '../screens/PortfolioScreen/PortfolioScreen';
+
+const Tab = createBottomTabNavigator();
+
+const AuthenticatedNavigator = () => {
+  const iconColor = {
+    true: '#0300A2',
+    false: '#8D8DA6'
+  };
+
+  const labelColor = {
+    true: 'text-xs text-cw-blue',
+    false: 'text-xs text-cw-grey'
+  };
+
+  const renderDashboardLabel = (focused) => (
+    <CWText
+      className={labelColor[focused]}
+      fontWeight={500}
+      color={iconColor[focused]}>
+      Dashboard
+    </CWText>
+  );
+
+  const renderDashboardIcon = (focused) => (
+    <FontAwesome6 name="house" size={20} color={iconColor[focused]} />
+  );
+
+  const renderMarketLabel = (focused) => {
+    return (
+      <CWText
+        className={labelColor[focused]}
+        fontWeight={500}
+        color={iconColor[focused]}>
+        Market
+      </CWText>
+    );
+  };
+
+  const renderMarketIcon = (focused) => {
+    return <FontAwesome6 name="shop" size={20} color={iconColor[focused]} />;
+  };
+
+  const renderTransactionHistoryLabel = (focused) => {
+    return (
+      <CWText
+        className={labelColor[focused]}
+        fontWeight={500}
+        color={iconColor[focused]}>
+        History
+      </CWText>
+    );
+  };
+
+  const renderTransactionHistoryIcon = (focused) => {
+    return <FontAwesome name="history" size={20} color={iconColor[focused]} />;
+  };
+
+  const renderPortfolioLabel = (focused) => {
+    return (
+      <CWText
+        className={labelColor[focused]}
+        fontWeight={500}
+        color={iconColor[focused]}>
+        Portfolio
+      </CWText>
+    );
+  };
+
+  const renderPortfolioIcon = (focused) => {
+    return (
+      <FontAwesome6 name="chart-simple" size={20} color={iconColor[focused]} />
+    );
+  };
+
+  const tabScreensOptions = {
+    dashboardScreen: {
+      tabBarLabel: ({ focused }) => renderDashboardLabel(focused),
+      tabBarIcon: ({ focused }) => renderDashboardIcon(focused)
+    },
+    portfolioScreen: {
+      tabBarLabel: ({ focused }) => renderPortfolioLabel(focused),
+      tabBarIcon: ({ focused }) => renderPortfolioIcon(focused)
+    },
+    transactionHistoryScreen: {
+      tabBarLabel: ({ focused }) => renderTransactionHistoryLabel(focused),
+      tabBarIcon: ({ focused }) => renderTransactionHistoryIcon(focused)
+    },
+    marketScreen: {
+      tabBarLabel: ({ focused }) => renderMarketLabel(focused),
+      tabBarIcon: ({ focused }) => renderMarketIcon(focused)
+    }
+  };
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false
+      }}>
+      <Tab.Screen
+        name="DashboardScreen"
+        component={DashboardScreen}
+        options={tabScreensOptions.dashboardScreen}
+      />
+      <Tab.Screen
+        name="MarketNavigator"
+        component={MarketNavigator}
+        options={tabScreensOptions.marketScreen}
+      />
+      <Tab.Screen
+        name="History"
+        component={TransactionHistoryScreen}
+        options={tabScreensOptions.transactionHistoryScreen}
+      />
+      <Tab.Screen
+        name="PortfolioScreen"
+        component={PortfolioScreen}
+        options={tabScreensOptions.portfolioScreen}
+      />
+    </Tab.Navigator>
+  );
+};
+
+export default AuthenticatedNavigator;
+
+ini main navigator import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import LoginScreen from '../screens/LoginScreen/LoginScreen';
+import SplashScreen from '../screens/SplashScreen/SplashScreen';
+import AuthenticatedNavigator from './AuthenticatedNavigator';
+
+const Stack = createNativeStackNavigator();
+
+const MainNavigator = () => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen
+        name="Authenticated"
+        component={AuthenticatedNavigator}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export default MainNavigator;
+ini app jsx
+import { NavigationContainer } from '@react-navigation/native';
+import React from 'react';
+import { SafeAreaView } from 'react-native';
+import { CustomerProvider } from './components/CustomerProvider';
+import MainNavigator from './navigator/MainNavigator';
+
+const App = () => {
+  return (
+    <SafeAreaView className="flex-1">
+      <CustomerProvider>
+        <NavigationContainer>
+          <MainNavigator />
+        </NavigationContainer>
+      </CustomerProvider>
+    </SafeAreaView>
+  );
+};
+
+export default App;
+
+ini dashboard:
+import React, { useCallback, useContext, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import CWText from '../../components/CWText';
 import DashboardLineChart from './DashboardLineChart';
@@ -10,24 +248,24 @@ import DashboardProfitDetailScreen from './DashboardProfitDetailScreen';
 import {
   priceHistoriesURL,
   transactionsURL,
-  portfoliosURL,
-  customerURL
+  portfoliosURL
 } from '../../config/config';
 import axios from 'axios';
-import { useFocusEffect } from '@react-navigation/core';
+import { useFocusEffect } from '@react-navigation/native';
+import { CustomerContext } from '../../components/CustomerProvider';
 
 const DashboardScreen = ({ navigation }) => {
+  const { customerData } = useContext(CustomerContext);
   const [pointDetail, setPointDetail] = useState();
   const [chartData, setChartData] = useState({
     graphData: [],
     baseData: [],
-    customer: {},
+    customer: customerData,
     balance: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
   const getEndDate = () => {
     return new Date();
   };
@@ -64,7 +302,6 @@ const DashboardScreen = ({ navigation }) => {
       setIsError(false);
       const startDate = getStartDate();
       const endDate = getEndDate();
-      const { data: customer } = await axios.get(customerURL, { headers });
 
       const { data: portfolios } = await axios.get(
         `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
@@ -92,20 +329,16 @@ const DashboardScreen = ({ navigation }) => {
         ...data,
         graphData: graphData,
         baseData: baseData,
-        customer,
+        customer: customerData,
         balance: customerBalance
       }));
     } catch (error) {
-      if (error?.response?.data?.message === 'Invalid Token') {
-        await EncryptedStorage.removeItem('token');
-        navigation.replace('Login');
-      }
       setErrorMessage('Oops, something wrong!');
       setIsError(true);
     } finally {
       setIsLoading(false);
     }
-  }, [getBaseData, getGraphData, navigation]);
+  }, [getBaseData, getGraphData, customerData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -249,164 +482,4 @@ DashboardScreen.propTypes = {
 
 export default DashboardScreen;
 
-ini test kodingan : /* eslint-disable testing-library/no-node-access */
-import React from 'react';
-import { render, screen, act } from '@testing-library/react-native';
-import DashboardScreen from '../../../src/screens/DashboardScreen/DashboardScreen';
-import axios from 'axios';
-import { when } from 'jest-when';
-import { portfoliosResponse } from '../../fixturesFolder/portfolio';
-import { transactionsResponse } from '../../fixturesFolder/transactions';
-import priceHistoriesResponse from '../../fixturesFolder/priceHistory';
-import {
-  customerURL,
-  portfoliosURL,
-  priceHistoriesURL,
-  transactionsURL
-} from '../../../src/config/config';
-import { VictoryVoronoiContainer } from 'victory-native';
-import { View } from 'react-native';
-import { pointDetail } from '../../fixturesFolder/pointDetail';
-import convertToRupiah from '../../../src/utils/convertToRupiah';
-import customerData from '../../fixturesFolder/customerData';
-import EncryptedStorage from 'react-native-encrypted-storage';
-import { useFocusEffect } from '@react-navigation/native';
 
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn()
-}));
-
-jest.mock('axios', () => ({
-  get: jest.fn()
-}));
-
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn()
-}));
-
-jest.mock('react-native-encrypted-storage', () => ({
-  getItem: jest.fn()
-}));
-
-jest.mock('victory-native', () => {
-  const originalModule = jest.requireActual('victory-native');
-
-  return {
-    ...originalModule,
-    VictoryVoronoiContainer: jest.fn()
-  };
-});
-
-describe('DashboardScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetAllMocks();
-  });
-
-  it('should display text dashboard in dashboard route when app is running', async () => {
-    const token = 'token';
-    EncryptedStorage.getItem.mockResolvedValue(token);
-    const headers = {
-      Authorization: `Bearer ${token}`
-    };
-    VictoryVoronoiContainer.mockImplementation(() => (
-      <View accessibilityLabel="container" />
-    ));
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 6);
-    useFocusEffect.mockImplementationOnce((callback) => callback());
-    when(axios.get)
-      .calledWith(customerURL, { headers })
-      .mockResolvedValue({ data: customerData })
-      .calledWith(
-        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      )
-      .mockResolvedValue({ data: portfoliosResponse })
-      .calledWith(
-        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`,
-        { headers }
-      )
-      .mockResolvedValue({ data: priceHistoriesResponse })
-      .calledWith(transactionsURL, { headers })
-      .mockResolvedValue({ data: transactionsResponse });
-    render(<DashboardScreen />);
-
-    const dashboardHeading = await screen.findByLabelText('Dashboard');
-
-    expect(dashboardHeading).toBeDefined();
-    expect(axios.get).toHaveBeenCalledTimes(4);
-
-    const profileContainer = await screen.findByLabelText('Account balance');
-    const username = screen.getByText(`Welcome, ${customerData.name}`);
-
-    expect(profileContainer).toBeDefined();
-    expect(username).toBeDefined();
-
-    const profitGraphContainer = screen.getByLabelText(
-      'profit loss line chart'
-    );
-
-    expect(profitGraphContainer).toBeDefined();
-
-    const mockVictoryContainer = VictoryVoronoiContainer.mock.calls[0][0];
-    const activatedMethod = mockVictoryContainer.onActivated;
-    const labelsMethod = mockVictoryContainer.labels;
-    const datum = {
-      balance: 58554004.9,
-      date: '07 Nov 2023',
-      transactions: []
-    };
-    const balanceTickFormatResult =
-      mockVictoryContainer.children[0].props.tickFormat(1000000);
-    const dateTickFormatResult =
-      mockVictoryContainer.children[1].props.tickFormat(datum.date);
-
-    await act(async () => {
-      activatedMethod([pointDetail]);
-    });
-    labelsMethod({
-      datum
-    });
-
-    expect(balanceTickFormatResult).toEqual('1M');
-    expect(dateTickFormatResult).toEqual('07 Nov');
-    expect(convertToRupiah(datum.balance)).toBeDefined();
-    expect(datum.date).toBeDefined();
-  });
-
-  it('should return error message when failed to fetch data from API', async () => {
-    const error = new Error('Oops, something wrong!');
-
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 6);
-
-    when(axios.get)
-      .calledWith(
-        `${portfoliosURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`
-      )
-      .mockResolvedValueOnce({ data: portfoliosResponse })
-      .calledWith(
-        `${priceHistoriesURL}?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`
-      )
-      .mockResolvedValueOnce({ data: priceHistoriesResponse })
-      .calledWith(transactionsURL)
-      .mockRejectedValueOnce(error)
-      .calledWith(
-        `${customerURL}/portfolio-histories?dateFrom=${startDate.toLocaleDateString()}&dateTo=${endDate.toLocaleDateString()}`
-      )
-      .mockResolvedValueOnce({ data: portfoliosResponse })
-      .calledWith(customerURL)
-      .mockResolvedValueOnce({ data: customerData });
-
-    render(<DashboardScreen />);
-    const dashboardHeading = screen.queryByLabelText('Dashboard');
-    const errorMessage = await screen.findByText(error.message);
-
-    expect(dashboardHeading).toBeNull();
-
-    expect(errorMessage).toBeDefined();
-  });
-}); kenapa error pada render dashboard Couldn't find a navigation object. Is your component inside NavigationContainer?
