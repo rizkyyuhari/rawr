@@ -1,245 +1,77 @@
-import React, { useCallback, useContext, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
-import CWText from '../../components/CWText';
-import DashboardLineChart from './DashboardLineChart';
-import DashboardProfile from './DashboardProfile';
-import EncryptedStorage from 'react-native-encrypted-storage';
-import DashboardProfitDetailScreen from './DashboardProfitDetailScreen';
-import { priceHistoriesURL, BASE_URL } from '../../configs/apiConfig';
-import axios from 'axios';
-import { ONE } from '../../utils/enums';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { CustomerContext } from '../../components/CustomerProvider';
-
-const DashboardScreen = () => {
-  const navigation = useNavigation();
-  const { customerData } = useContext(CustomerContext);
-  const [pointDetail, setPointDetail] = useState();
-  const [chartData, setChartData] = useState({
-    graphData: [],
-    baseData: [],
-    customer: customerData,
-    balance: 0
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const getEndDate = () => {
-    return new Date();
-  };
-
-  const getStartDate = () => {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 6);
-    return startDate;
-  };
-
-  const getCustomerBalance = (data) => {
-    const IDR = 'IDR';
-    const rupiahTicker = data.tickers.find((ticker) => ticker.ticker === IDR);
-    return rupiahTicker?.amount;
-  };
-
-  const getTodayPortfolio = (portfolios) => {
-    return portfolios.find((portfolio) => {
-      return (
-        new Date(portfolio.date).toLocaleDateString() ===
-        new Date().toLocaleDateString()
-      );
-    });
-  };
-
-  const getTodayDetail = useCallback((graphData) => {
-    setPointDetail({
-      balance: graphData[graphData.length - ONE].balance,
-      date: graphData[graphData.length - ONE].date,
-      transactions: graphData[graphData.length - ONE].transactions
-    });
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    const token = await EncryptedStorage.getItem('token');
-    const headers = {
-      Authorization: `Bearer ${token}`
-    };
-
-    try {
-      setIsLoading(true);
-      setIsError(false);
-      const startDate = getStartDate();
-      const endDate = getEndDate();
-
-      const { data: portfolios } = await axios.get(
-        `${BASE_URL}/customers/${
-          customerData.id
-        }/portfolio-histories?date_from=${startDate.toLocaleDateString()}&date_to=${endDate.toLocaleDateString()}`,
-        { headers }
-      );
-
-      console.log('portfolios', portfolios);
-      const { data: priceHistories } = await axios.get(
-        `${priceHistoriesURL}?date_from=${startDate.toLocaleDateString()}&date_to=${endDate.toLocaleDateString()}`,
-        { headers }
-      );
-      console.log('priceHistoru', priceHistories);
-      const { data: transactions } = await axios.get(
-        `${BASE_URL}/customers/${customerData.id}/transactions`,
-        {
-          headers
-        }
-      );
-      console.log('transactions', transactions);
-
-      const apiData = {
-        portfolios: portfolios.portfolios,
-        priceHistories: priceHistories.priceHistories,
-        transactions: transactions.transactions
-      };
-      const graphData = getGraphData(apiData);
-      getTodayDetail(graphData);
-      const baseData = getBaseData(graphData);
-      const customerBalance = getCustomerBalance(
-        getTodayPortfolio(apiData.portfolios)
-      );
-      setChartData((data) => ({
-        ...data,
-        graphData: graphData,
-        baseData: baseData,
-        customer: customerData,
-        balance: customerBalance
-      }));
-    } catch (error) {
-      console.log('error', error);
-      if (error?.response?.data?.message === 'Invalid Token') {
-        await EncryptedStorage.removeItem('token');
-        navigation.replace('Login');
-      }
-      setErrorMessage('Oops, something wrong!');
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getGraphData, getTodayDetail, getBaseData, customerData, navigation]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [fetchData])
-  );
-
-  const getGraphBalance = (portfolio, priceHistories, portfolioDate) => {
-    return portfolio.tickers
-      .map((ticker) => {
-        const price = priceHistories.find((priceHistory) => {
-          const priceDate = new Date(priceHistory.date).toLocaleDateString();
-          return (
-            portfolioDate === priceDate &&
-            priceHistory.ticker.ticker === ticker.ticker
-          );
-        });
-        return price?.price ? ticker.amount * price?.price : ticker.amount;
-      })
-      .reduce((total, tickerPrice) => total + tickerPrice, 0);
-  };
-
-  const getDate = (portfolio) => {
-    return new Date(portfolio.date).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  const getTransactions = (transactions, portfolioDate) => {
-    return transactions.filter((transaction) => {
-      const transactionDate = new Date(transaction.date).toLocaleDateString();
-      return transactionDate === portfolioDate;
-    });
-  };
-
-  const getGraphData = useCallback((data) => {
-    const { priceHistories, portfolios, transactions } = data;
-    return portfolios.map((portfolio) => {
-      const portfolioDate = new Date(portfolio.date).toLocaleDateString();
-      return {
-        balance: getGraphBalance(portfolio, priceHistories, portfolioDate),
-        date: getDate(portfolio),
-        transactions: getTransactions(transactions, portfolioDate)
-      };
-    });
-  }, []);
-
-  const getBaseData = useCallback((data) => {
-    const newBaseData = [];
-
-    data.map((item, index) => {
-      newBaseData.push({
-        ...item,
-        balance: data[0].balance,
-        date: data[index].date
-      });
-    });
-
-    return newBaseData;
-  }, []);
-
-  const handleProfitDetailClick = (dataPoint) => {
-    dataPoint.map((point) => {
-      setPointDetail({
-        balance: point.balance,
-        date: point.date,
-        transactions: point.transactions
-      });
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-cw-lightpurple">
-        <ActivityIndicator
-          accessibilityLabel="loader-activity"
-          size="large"
-          color="blue"
-        />
-      </View>
-    );
+{
+  "name": "cok",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint --ext .jsx,.js,.",
+    "preview": "vite preview",
+    "test": "jest --coverage",
+    "test:sonar": "jest --watchAll=false --coverage --testResultsProcessor ./node_modules/jest-sonar-reporter",
+    "presonar": "npm run test:sonar",
+    "sonar": "node sonarQubeScanner.js"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.16",
+    "@mui/material": "^5.14.16",
+    "@mui/styled-engine-sc": "^6.0.0-alpha.4",
+    "@testing-library/dom": "^9.3.3",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^14.0.0",
+    "@vitejs/plugin-react": "^4.0.3",
+    "axios": "^1.5.1",
+    "chart.js": "^4.4.0",
+    "eslint-import-resolver-alias": "^1.1.2",
+    "jest-when": "^3.6.0",
+    "jwt-decode": "^4.0.0",
+    "prop-types": "^15.8.1",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.17.0",
+    "sonarqube-scanner": "^3.2.0",
+    "styled-components": "^6.1.0",
+    "vite": "^4.4.5",
+    "whatwg-fetch": "^3.6.19"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.2",
+    "@babel/eslint-parser": "^7.22.15",
+    "@babel/preset-env": "^7.23.2",
+    "@babel/preset-react": "^7.22.15",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/jest": "^29.5.6",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.52.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-jest": "^27.4.3",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-prettier": "^5.0.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-prefer-function-component": "^3.3.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "eslint-plugin-testing-library": "^6.1.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.7.0",
+    "jest-canvas-mock": "^2.5.2",
+    "jest-environment-jsdom": "^29.7.0",
+    "jest-sonar-reporter": "^2.0.0",
+    "postcss": "^8.4.31",
+    "prettier": "^3.0.3",
+    "prettier-plugin-tailwindcss": "^0.5.6",
+    "tailwindcss": "^3.3.5"
+  },
+  "jestSonar": {
+    "reportPath": "coverage",
+    "reportFile": "test-reporter.xml",
+    "indent": 4
   }
-
-  if (errorMessage && isError) {
-    return (
-      <View
-        accessibilityLabel="error"
-        className="flex-1 justify-center items-center bg-cw-lightpurple">
-        <CWText className="text-2xl text-center">{errorMessage}</CWText>
-      </View>
-    );
-  }
-  return (
-    <ScrollView className="flex-1 min-w-full bg-cw-lightgrey">
-      <View className="flex-1 h-full" accessibilityLabel="Dashboard">
-        {chartData.graphData.length > 0 && (
-          <View>
-            <View className="px-6 justify-center flex-col">
-              <DashboardProfile
-                customerData={chartData.customer}
-                balance={chartData.balance}
-              />
-            </View>
-            <View accessibilityLabel="profit loss line chart">
-              <DashboardLineChart
-                data={chartData.graphData}
-                baseData={chartData.baseData}
-                handleProfitDetailClick={handleProfitDetailClick}
-              />
-            </View>
-            {pointDetail && (
-              <DashboardProfitDetailScreen pointDetail={pointDetail} />
-            )}
-          </View>
-        )}
-      </View>
-    </ScrollView>
-  );
-};
-
-export default DashboardScreen;
+}
