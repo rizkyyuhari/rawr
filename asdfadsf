@@ -1,100 +1,18 @@
 [
+  { id: '656198d4322042eab32c4bb4', name: 'fiqih', parent: null },
   {
-    _id: new ObjectId('656198d4322042eab32c4bb4'),
-    name: 'fiqih',
-    parent: null,
-    createdAt: 2023-11-25T06:48:52.062Z,
-    updatedAt: 2023-11-25T06:48:52.062Z,
-    __v: 0
-  },
-  {
-    _id: new ObjectId('656198e1322042eab32c4bb6'),
+    id: '656198e1322042eab32c4bb6',
     name: 'fiqih jinayat',
-    parent: new ObjectId('656198d4322042eab32c4bb4'),
-    createdAt: 2023-11-25T06:49:05.479Z,
-    updatedAt: 2023-11-25T06:49:05.479Z,
-    __v: 0
+    parent: '656198d4322042eab32c4bb4'
   },
   {
-    _id: new ObjectId('65619a51d8c5747393d46b87'),
+    id: '65619a51d8c5747393d46b87',
     name: 'fiqih jinayat sub 1',
-    parent: new ObjectId('656198e1322042eab32c4bb6'),
-    createdAt: 2023-11-25T06:55:13.629Z,
-    updatedAt: 2023-11-25T06:55:13.629Z,
-    __v: 0
+    parent: '656198e1322042eab32c4bb6'
   },
   {
-    _id: new ObjectId('65619ad36087bc31486ff21c'),
+    id: '65619ad36087bc31486ff21c',
     name: 'fiqih jinayat sub sub 1',
-    parent: new ObjectId('65619a51d8c5747393d46b87'),
-    createdAt: 2023-11-25T06:57:23.672Z,
-    updatedAt: 2023-11-25T06:57:23.672Z,
-    __v: 0
+    parent: '65619a51d8c5747393d46b87'
   }
 ]
-
-
-function buildTree(categories, parent = null) {
-  let tree = [];
-  for (const category of categories) {
-    if (category.parent === parent) {
-      const children = buildTree(categories, category._id);
-      if (children.length) {
-        category.children = children;
-      }
-      tree.push(category);
-    }
-  }
-  return tree;
-}
-
-const formattedTree = buildTree(data.category);
-console.log(JSON.stringify(formattedTree, null, 2));
-
-
-
-function buildTree(categories, parent = null) {
-    let tree = [];
-    for (const category of categories) {
-      if (category.parent === parent) {
-        const children = buildTree(categories, category._id);
-        if (children.length) {
-          category.children = children;
-        }
-        tree.push(category);
-      }
-    }
-    return tree;
-  }
-  const data = await CategoryModel.find();
-  console.log("data", data);
-  const newData = [];
-  for (datum of data) {
-    newData.push({
-      id: datum._id.toString(),
-      name: datum.name,
-      parent: datum.parent && datum.parent.toString(),
-    });
-  }
-  console.log("newData", newData);
-  const formatedData = buildTree([
-    { id: "656198d4322042eab32c4bb4", name: "fiqih", parent: null },
-    {
-      id: "656198e1322042eab32c4bb6",
-      name: "fiqih jinayat",
-      parent: "656198d4322042eab32c4bb4",
-    },
-    {
-      id: "65619a51d8c5747393d46b87",
-      name: "fiqih jinayat sub 1",
-      parent: "656198e1322042eab32c4bb6",
-    },
-    {
-      id: "65619ad36087bc31486ff21c",
-      name: "fiqih jinayat sub sub 1",
-      parent: "65619a51d8c5747393d46b87",
-    },
-  ]);
-  console.log(formatedData);
-
-
