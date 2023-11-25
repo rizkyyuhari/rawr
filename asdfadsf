@@ -34,3 +34,22 @@
         }
     ]
 }
+
+
+function buildTree(categories, parent = null) {
+  let tree = [];
+  for (const category of categories) {
+    if (category.parent === parent) {
+      const children = buildTree(categories, category._id);
+      if (children.length) {
+        category.children = children;
+      }
+      tree.push(category);
+    }
+  }
+  return tree;
+}
+
+const formattedTree = buildTree(data.category);
+console.log(JSON.stringify(formattedTree, null, 2));
+
