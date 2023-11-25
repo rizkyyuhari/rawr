@@ -1,39 +1,37 @@
-{
-    "category": [
-        {
-            "_id": "656198d4322042eab32c4bb4",
-            "name": "fiqih",
-            "parent": null,
-            "createdAt": "2023-11-25T06:48:52.062Z",
-            "updatedAt": "2023-11-25T06:48:52.062Z",
-            "__v": 0
-        },
-        {
-            "_id": "656198e1322042eab32c4bb6",
-            "name": "fiqih jinayat",
-            "parent": "656198d4322042eab32c4bb4",
-            "createdAt": "2023-11-25T06:49:05.479Z",
-            "updatedAt": "2023-11-25T06:49:05.479Z",
-            "__v": 0
-        },
-        {
-            "_id": "65619a51d8c5747393d46b87",
-            "name": "fiqih jinayat sub 1",
-            "parent": "656198e1322042eab32c4bb6",
-            "createdAt": "2023-11-25T06:55:13.629Z",
-            "updatedAt": "2023-11-25T06:55:13.629Z",
-            "__v": 0
-        },
-        {
-            "_id": "65619ad36087bc31486ff21c",
-            "name": "fiqih jinayat sub sub 1",
-            "parent": "65619a51d8c5747393d46b87",
-            "createdAt": "2023-11-25T06:57:23.672Z",
-            "updatedAt": "2023-11-25T06:57:23.672Z",
-            "__v": 0
-        }
-    ]
-}
+[
+  {
+    _id: new ObjectId('656198d4322042eab32c4bb4'),
+    name: 'fiqih',
+    parent: null,
+    createdAt: 2023-11-25T06:48:52.062Z,
+    updatedAt: 2023-11-25T06:48:52.062Z,
+    __v: 0
+  },
+  {
+    _id: new ObjectId('656198e1322042eab32c4bb6'),
+    name: 'fiqih jinayat',
+    parent: new ObjectId('656198d4322042eab32c4bb4'),
+    createdAt: 2023-11-25T06:49:05.479Z,
+    updatedAt: 2023-11-25T06:49:05.479Z,
+    __v: 0
+  },
+  {
+    _id: new ObjectId('65619a51d8c5747393d46b87'),
+    name: 'fiqih jinayat sub 1',
+    parent: new ObjectId('656198e1322042eab32c4bb6'),
+    createdAt: 2023-11-25T06:55:13.629Z,
+    updatedAt: 2023-11-25T06:55:13.629Z,
+    __v: 0
+  },
+  {
+    _id: new ObjectId('65619ad36087bc31486ff21c'),
+    name: 'fiqih jinayat sub sub 1',
+    parent: new ObjectId('65619a51d8c5747393d46b87'),
+    createdAt: 2023-11-25T06:57:23.672Z,
+    updatedAt: 2023-11-25T06:57:23.672Z,
+    __v: 0
+  }
+]
 
 
 function buildTree(categories, parent = null) {
