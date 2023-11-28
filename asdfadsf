@@ -1,18 +1,84 @@
-[
-  { id: '656198d4322042eab32c4bb4', name: 'fiqih', parent: null },
-  {
-    id: '656198e1322042eab32c4bb6',
-    name: 'fiqih jinayat',
-    parent: '656198d4322042eab32c4bb4'
-  },
-  {
-    id: '65619a51d8c5747393d46b87',
-    name: 'fiqih jinayat sub 1',
-    parent: '656198e1322042eab32c4bb6'
-  },
-  {
-    id: '65619ad36087bc31486ff21c',
-    name: 'fiqih jinayat sub sub 1',
-    parent: '65619a51d8c5747393d46b87'
-  }
-]
+import { Link, useLocation } from 'react-router-dom';
+import './styles/Sidebar.css';
+import {
+  Poll as PollIcon,
+  History as HistoryIcon,
+  LocalGroceryStore as LocalGroceryStoreIcon,
+  Home as HomeIcon,
+  Logout
+} from '@mui/icons-material';
+
+const Sidebar = () => {
+  const location = useLocation();
+
+  const iconColor = {
+    true: '#0300A2',
+    false: '#697586'
+  };
+
+  const navigations = [
+    {
+      route: '/',
+      icon: <HomeIcon fontSize="medium" style={{ color: iconColor[location.pathname === '/'] }} />
+    },
+    {
+      route: '/market',
+      icon: (
+        <LocalGroceryStoreIcon
+          fontSize="medium"
+          style={{ color: iconColor[location.pathname === '/market'] }}
+        />
+      )
+    },
+    {
+      route: '/transaction-history',
+      icon: (
+        <HistoryIcon
+          fontSize="medium"
+          style={{ color: iconColor[location.pathname === '/transaction-history'] }}
+        />
+      )
+    },
+    {
+      route: '/portfolio',
+      icon: (
+        <PollIcon
+          fontSize="medium"
+          style={{ color: iconColor[location.pathname === '/portfolio'] }}
+        />
+      )
+    }
+  ];
+
+  return (
+    <div className="sidebar">
+      <img src="/CryptoWise.png" alt="crypto-wise-logo" />
+      <div className="mt-7 flex flex-1 flex-col items-center gap-3">
+        {navigations.map((navigation) => (
+          <Link className="navigation-item" to={navigation.route} key={navigation.route}>
+            <div
+              className={
+                location.pathname === navigation.route ? 'rounded-lg bg-[#F8FAFC] p-3' : 'p-3'
+              }
+            >
+              {navigation.icon}
+            </div>
+          </Link>
+        ))}
+      </div>
+      <Link
+        data-testid="logout-button"
+        to="/login"
+        onClick={() => {
+          localStorage.removeItem('token');
+        }}
+      >
+        <div className="rounded-lg bg-[#FEF2F4] p-3">
+          <Logout color="error" />
+        </div>
+      </Link>
+    </div>
+  );
+};
+
+export default Sidebar;
