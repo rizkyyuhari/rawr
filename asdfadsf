@@ -1,65 +1,24 @@
-// @flow
+// ... (previous code)
 
-/**
- * builtin
- */
-import * as React from 'react';
+<Form.Item
+  label={<label> {label} <span style={{ color: 'red' }}>{required ? '*' : ''}</span> </label>}
+  rules={[
+    {
+      required: true,
+      message: 'Must be filled',
+    },
+  ]}
+>
+  <Input />
+</Form.Item>
 
-/**
- * External
- */
-import { Input, Form, Button } from 'antd';
+<Form.Item>
+  <Button
+    type="primary"
+    htmlType="submit"
+  >
+    Tambah
+  </Button>
+</Form.Item>
 
-/**
- * internal library
- */
-import config from './TextInput.component.config';
-import type { Props } from './TextInput.component.types';
-
-
-/**
- * @returns {void} return void
- */
-const onFinish = async (): void => {
-  console.log('mantap');
-};
-
-/**
- * @param { Props } props - this is a prop types
- * @returns {React.Node} text input
- */
-const TextInput = (props: Props): React.Node => {
-  const { required, label } = props;
-
-  return (
-    <Form
-      layout="vertical"
-      onFinish={onFinish}
-    >
-      <Form.Item
-        label={<label> {label} <span style={{ color: 'red' }}>{required ? '*' : ''}</span> </label>}
-        rules={[
-          {
-            required: true,
-            message: 'Must filled',
-          },
-        ]}
-      >
-        <Input />
-        <Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-          >
-            Tambah
-          </Button>
-        </Form.Item>
-      </Form.Item>
-    </Form>
-
-  );
-};
-
-TextInput.defaultProps = config.defaultProps;
-
-export default TextInput;
+</Form>
