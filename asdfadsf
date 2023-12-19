@@ -1,17 +1,51 @@
 // @flow
 
-// $FlowFixMe
-import React from 'react';
-import renderer from 'react-test-renderer';
+/**
+ * builtin
+ */
+import * as React from 'react';
+
+/**
+ * External
+ */
+import { Input, Form } from 'antd';
+
+/**
+ * internal library
+ */
+import config from './TextInput.component.config';
+import type { Props } from './TextInput.component.types';
 
 
-import TextInput from './TextInput.component';
+/**
+ * @returns {void} return void
+ */
 
-describe('Testing Button Component', () => {
-  it('Should render component and return a snapshot test', () => {
-    const tree = renderer.create(
-      <TextInput label="mantap" placeholder="lah kok" />
-    );
-    expect(tree).toMatchSnapshot();
-  });
-});
+/**
+ * @param { Props } props - this is a prop types
+ * @returns {React.Node} text input
+ */
+const TextInput = (props: Props): React.Node => {
+  const { label, placeholder } = props;
+
+  return (
+
+    <Form.Item
+      label={<label> {label} </label>}
+      name={label}
+      rules={[
+        {
+          required: true,
+          message: `Please input ${label}!`,
+        },
+      ]}
+    >
+      <Input placeholder={placeholder} />
+    </Form.Item>
+
+  );
+};
+
+TextInput.defaultProps = config.defaultProps;
+
+export default TextInput;
