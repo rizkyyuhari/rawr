@@ -1,68 +1,17 @@
 // @flow
 
-/**
- * builtin
- */
-import * as React from 'react';
-
-/**
- * External
- */
-import { Input, Form, Button } from 'antd';
-
-/**
- * internal library
- */
-import config from './TextInput.component.config';
-import type { Props } from './TextInput.component.types';
+// $FlowFixMe
+import React from 'react';
+import renderer from 'react-test-renderer';
 
 
-/**
- * @returns {void} return void
- */
-const onFinish = async (): void => {
-  console.log('mantap');
-};
+import TextInput from './TextInput.component';
 
-/**
- * @param { Props } props - this is a prop types
- * @returns {React.Node} text input
- */
-const TextInput = (props: Props): React.Node => {
-  const { required, label, placeholder } = props;
-
-  return (
-    <Form
-      layout="vertical"
-      onFinish={onFinish}
-    >
-      <Form.Item
-        label={<label> {label} <span style={{ color: 'red' }}>{required ? '*' : ''}</span> </label>}
-        name={label}
-        rules={[
-          {
-            required: true,
-            message: `Please input ${label}!`,
-          },
-        ]}
-      >
-        <Input placeholder={placeholder} />
-      </Form.Item>
-
-      <Form.Item>
-        <Button
-          type="primary"
-          htmlType="submit"
-        >
-          Tambah
-        </Button>
-      </Form.Item>
-
-    </Form>
-
-  );
-};
-
-TextInput.defaultProps = config.defaultProps;
-
-export default TextInput;
+describe('Testing Button Component', () => {
+  it('Should render component and return a snapshot test', () => {
+    const tree = renderer.create(
+      <TextInput label="mantap" placeholder="lah kok" />
+    );
+    expect(tree).toMatchSnapshot();
+  });
+});
