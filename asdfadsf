@@ -1,1 +1,14 @@
-node --max-old-space-size=4096 node_modules/react-native/local-cli/cli.js start
+const TextInput = (props: Props): React.Node => {
+  const { required } = props;
+
+  return (
+    <Form
+      layout="vertical"
+    >
+      <Form.Item label={`Name ${!required ? '*' : ''}`}>
+        <Input />
+      </Form.Item>
+    </Form>
+
+  );
+};
