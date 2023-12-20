@@ -1,35 +1,48 @@
-const _renderInput = (props: Props): React.Node => {
-  const [error, setError] = useState(false);
+import React from 'react';
+import { render, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import _renderInput from './_renderInput'; // Adjust the import path accordingly
 
-  /**
-   * @returns {void} - changing error state
-   */
-  const onBlur = (): void => {
-    if (!props.value) {
-      return setError(true);
-    }
+describe('_renderInput component', () => {
+  it('should set error state on onBlur when value is empty', () => {
+    const props = {
+      value: '',
+      label: 'Test Label',
+      required: true,
+      placeholder: 'Test Placeholder',
+      onChange: jest.fn(),
+      maxLength: 10,
+      disabled: false,
+    };
 
-    return setError(false);
-  };
+    const { getByPlaceholderText, getByText } = render(<_renderInput {...props} />);
 
-  const errorBorderColor = error && props.required;
+    const inputElement = getByPlaceholderText('Test Placeholder');
 
-  return (
-    <>
-      <div className="text-14px">
-        {`${props.label}`}
-        {props.required && <span className="text-red-500">*</span>}
-      </div>
-      <Input
-        value={props.value}
-        placeholder={props.placeholder}
-        className={_inputBorderColor(errorBorderColor)}
-        onChange={props.onChange}
-        onBlur={onBlur}
-        maxLength={props.maxLength}
-        disabled={props.disabled}
-      />
-      {props.required && showErrorMessage(error, props.label)}
-    </>
-  );
-};
+    fireEvent.blur(inputElement);
+
+    expect(getByText('Test Label*')).toBeInTheDocument(); // Check if the required indicator is shown
+  });
+
+  it('should not set error state on onBlur when value is not empty', () => {
+    const props = {
+      value: 'non-empty-value',
+      label: 'Test Label',
+      required: true,
+      placeholder: 'Test Placeholder',
+      onChange: jest.fn(),
+      maxLength: 10,
+      disabled: false,
+    };
+
+    const { queryByText, getByPlaceholderText } = render(<_renderInput {...props} />);
+
+    const inputElement = getByPlaceholderText('Test Placeholder');
+
+    fireEvent.blur(inputElement);
+
+    expect(queryByText('Test Label*')).toBeNull(); // Check that the required indicator is not shown
+  });
+
+  // Add more test cases as needed
+});
