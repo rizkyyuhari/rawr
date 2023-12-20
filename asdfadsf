@@ -8,40 +8,46 @@ import * as React from 'react';
 /**
  * External
  */
-import { Input, Form } from 'antd';
+import { Input } from 'antd';
 
 /**
  * internal library
  */
+
+
 import config from './TextInput.component.config';
 import type { Props } from './TextInput.component.types';
 
+import './TextInput.component.style.css';
 
-/**
- * @returns {void} return void
- */
 
 /**
  * @param { Props } props - this is a prop types
  * @returns {React.Node} text input
  */
 const TextInput = (props: Props): React.Node => {
-  const { label, placeholder } = props;
+  const {
+ label, placeholder, value, onChange,
+} = props;
+
 
   return (
-
-    <Form.Item
-      label={<label> {label} </label>}
-      name={label}
-      rules={[
-        {
-          required: true,
-          message: `Please input ${label}!`,
-        },
-      ]}
+    <div style={
+    {
+      width: '50%',
+    }}
     >
-      <Input placeholder={placeholder} />
-    </Form.Item>
+      <div style={{ color: 'black', fontSize: '14px' }}>{label}</div>
+      <Input
+        placeholder={placeholder}
+        style={
+        { borderColor: value.length ? 'red !important' : null,
+          ':focus, :hover': { borderColor: value.length ? 'red !important' : null } }}
+        value={value}
+        onChange={onChange}
+      />
+      {value.length === 0 ? <div style={{ color: 'red', fontSize: '14px' }}>error bro</div> : '' }
+    </div>
 
   );
 };
