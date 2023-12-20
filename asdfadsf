@@ -23,10 +23,11 @@ import './TextInput.component.style.css';
 
 /**
  * @param {string} check - check contain value on input
+ * @param {boolean} required - check contain value on input
  * @returns {React.Node} - return error if no input
  */
-const showError = (check: string) => (
-  (!check ? <div style={{ color: 'red', fontSize: '14px' }}>Cannot Be Emptied</div> : '')
+const showError = (check: string, required: boolean) => (
+  ((!check && required) ? <div style={{ color: 'red', fontSize: '14px' }}>Cannot Be Emptied</div> : '')
 );
 
 
@@ -38,17 +39,18 @@ const showError = (check: string) => (
 const _renderInput = (props: Props): React.Node => (
   <>
     <div style={{ color: 'black', fontSize: '14px' }}>
-      {`${props.label} ${props.required ? <span style={{ color: 'red' }}>f</span> : ''}`}
+      {`${props.label}`}
+      {props.required ? <span style={{ color: 'red' }}>*</span> : null}
     </div>
     <Input
       value={props.value}
       placeholder={props.placeholder}
       style={
-      { borderColor: props.value ? 'red !important' : null,
-        ':focus, :hover': { borderColor: props.value ? 'red !important' : null } }}
+      { borderColor: !props.value ? 'red' : '',
+        ':focus, :hover': { borderColor: 'red !important' } }}
       onChange={props.onChange}
     />
-    {showError(props.value)}
+    {showError(props.value, props.required)}
   </>
 );
 
