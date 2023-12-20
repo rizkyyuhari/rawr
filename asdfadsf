@@ -3,7 +3,7 @@
 /**
  * builtin
  */
-import * as React from 'react';
+import React from 'react';
 
 /**
  * External
@@ -22,35 +22,51 @@ import './TextInput.component.style.css';
 
 
 /**
+ * @param {string} check - check contain value on input
+ * @returns {React.Node} - return error if no input
+ */
+const showError = (check: string) => (
+  (!check ? <div style={{ color: 'red', fontSize: '14px' }}>Cannot Be Emptied</div> : '')
+);
+
+
+/**
+ *
+ * @param {*} props - props
+ * @returns {React.Node} - node
+ */
+const _renderInput = (props: Props): React.Node => (
+  <>
+    <div style={{ color: 'black', fontSize: '14px' }}>
+      {`${props.label} ${props.required ? <span style={{ color: 'red' }}>f</span> : ''}`}
+    </div>
+    <Input
+      value={props.value}
+      placeholder={props.placeholder}
+      style={
+      { borderColor: props.value ? 'red !important' : null,
+        ':focus, :hover': { borderColor: props.value ? 'red !important' : null } }}
+      onChange={props.onChange}
+    />
+    {showError(props.value)}
+  </>
+);
+
+/**
  * @param { Props } props - this is a prop types
  * @returns {React.Node} text input
  */
-const TextInput = (props: Props): React.Node => {
-  const {
- label, placeholder, value, onChange,
-} = props;
-
-
-  return (
-    <div style={
-    {
-      width: '50%',
-    }}
-    >
-      <div style={{ color: 'black', fontSize: '14px' }}>{label}</div>
-      <Input
-        placeholder={placeholder}
-        style={
-        { borderColor: value.length ? 'red !important' : null,
-          ':focus, :hover': { borderColor: value.length ? 'red !important' : null } }}
-        value={value}
-        onChange={onChange}
-      />
-      {value.length === 0 ? <div style={{ color: 'red', fontSize: '14px' }}>error bro</div> : '' }
-    </div>
-
+const TextInput = (props: Props): React.Node =>
+ (
+   <div style={
+   {
+     width: '50%',
+   }}
+   >
+     {_renderInput(props)}
+   </div>
   );
-};
+
 
 TextInput.defaultProps = config.defaultProps;
 
