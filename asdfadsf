@@ -1,75 +1,35 @@
-// @flow
+const _renderInput = (props: Props): React.Node => {
+  const [error, setError] = useState(false);
 
-/**
- * builtin
- */
-import React from 'react';
+  /**
+   * @returns {void} - changing error state
+   */
+  const onBlur = (): void => {
+    if (!props.value) {
+      return setError(true);
+    }
 
-/**
- * External
- */
-import { Input } from 'antd';
+    return setError(false);
+  };
 
-/**
- * internal library
- */
+  const errorBorderColor = error && props.required;
 
-
-import config from './TextInput.component.config';
-import type { Props } from './TextInput.component.types';
-
-import './TextInput.component.style.css';
-
-
-/**
- * @param {string} check - check contain value on input
- * @param {boolean} required - check contain value on input
- * @returns {React.Node} - return error if no input
- */
-const showError = (check: string, required: boolean) => (
-  ((!check && required) ? <div style={{ color: 'red', fontSize: '14px' }}>Cannot Be Emptied</div> : '')
-);
-
-
-/**
- *
- * @param {*} props - props
- * @returns {React.Node} - node
- */
-const _renderInput = (props: Props): React.Node => (
-  <>
-    <div style={{ color: 'black', fontSize: '14px' }}>
-      {`${props.label}`}
-      {props.required ? <span style={{ color: 'red' }}>*</span> : null}
-    </div>
-    <Input
-      value={props.value}
-      placeholder={props.placeholder}
-      style={
-      { borderColor: !props.value ? 'red' : '',
-        ':focus, :hover': { borderColor: 'red !important' } }}
-      onChange={props.onChange}
-    />
-    {showError(props.value, props.required)}
-  </>
-);
-
-/**
- * @param { Props } props - this is a prop types
- * @returns {React.Node} text input
- */
-const TextInput = (props: Props): React.Node =>
- (
-   <div style={
-   {
-     width: '50%',
-   }}
-   >
-     {_renderInput(props)}
-   </div>
+  return (
+    <>
+      <div className="text-14px">
+        {`${props.label}`}
+        {props.required && <span className="text-red-500">*</span>}
+      </div>
+      <Input
+        value={props.value}
+        placeholder={props.placeholder}
+        className={_inputBorderColor(errorBorderColor)}
+        onChange={props.onChange}
+        onBlur={onBlur}
+        maxLength={props.maxLength}
+        disabled={props.disabled}
+      />
+      {props.required && showErrorMessage(error, props.label)}
+    </>
   );
-
-
-TextInput.defaultProps = config.defaultProps;
-
-export default TextInput;
+};
