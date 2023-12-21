@@ -1,104 +1,27 @@
-// @flow
+Test suite failed to run
 
-import React from 'react';
-import { useState } from 'react';
-
-import { Input } from 'antd';
-
-import IconAssets from '../../assets/Icon/IconAssets';
-
-import config from './TextInput.component.config';
-import type { Props } from './TextInput.component.types';
-
-
-/**
- * @param {boolean} error - check contain value on input
- * @param {string} label - to show label on the error message
- * @returns {React.Node} - return error if no input
- */
-const showErrorMessage = (error: boolean, label: string) => (
-  (error ?
-    <div className="text-red-500 text-14px">{`${label} Cannot be Empty`}</div>
-  : '')
-);
-
-
-/**
- *
- * @param {*} error - to check if the input error or not
- * @returns {string} - to give border color red style when error
- */
-export const _inputBorderColor = (error: boolean) => {
-  if (error) {
-    return 'border-tp-red';
-  }
-
-  return '';
-};
-
-/**
- * 
- * @param {*} icon 
- * @returns {React.Node} - return icon component
- */
-const _showIcon = (icon: string): React.Node => icon && <img src={IconAssets[props.icon]} width="16px" />;
-
-
-
-/**
- *
- * @param {*} props - props
- * @returns {React.Node} - node
- */
-const _renderInput = (props: Props): React.Node => {
-  const [error, setError] = useState(false);
-
-  /**
-   * @returns {void} - changing error state
-   */
-  const onBlur = (): void => {
-    if (!props.value) {
-      return setError(true);
+    Configuration error:
+    
+    Could not locate module ./search.png mapped as:
+    RelativeImageStub.
+    
+    Please check your configuration for these entries:
+    {
+      "moduleNameMapper": {
+        "/^[@./a-zA-Z0-9$_-]+\.(png|gif)$/": "RelativeImageStub"
+      },
+      "resolver": undefined
     }
 
-    return setError(false);
-  };
+      1 | // @flow
+      2 |
+    > 3 | import search from './search.png';
+        | ^
+      4 |
+      5 | const IconAssets = {
+      6 |   SEARCH: search,
 
-  const errorBorderColor = error && props.required;
-
-  return (
-    <>
-      <div className="text-14px">
-        {`${props.label}`}
-        {props.required && <span className="text-red-500">*</span>}
-      </div>
-      <Input
-        value={props.value}
-        placeholder={props.placeholder}
-        onChange={props.onChange}
-        maxLength={props.maxLength}
-        disabled={props.disabled}
-        prefix={_showIcon(props.icon)}
-        className={_inputBorderColor(errorBorderColor)}
-        onBlur={onBlur}
-      />
-      {props.required && showErrorMessage(error, props.label)}
-    </>
-  );
-};
-
-/**
- * @param { Props } props - this is a prop types
- * @returns {React.Node} text input
- */
-const TextInput = (props: Props): React.Node =>
- (
-   <div className="w-3/12 flex flex-col items-start">
-     {_renderInput(props)}
-   </div>
-  );
-
-
-TextInput.defaultProps = config.defaultProps;
-
-export default TextInput;
+      at createNoMappedModuleFoundError (node_modules/jest-config/node_modules/jest-resolve/build/resolver.js:759:17)
+      at Object.require (src/Assets/Icon/IconAssets.js:3:1)
+      at Object.require (src/Components/TextInputComponent/TextInput.component.js:8:1)
+      at Object.require (src/Components/TextInputComponent/TextInput.component.test.js:9:1)
