@@ -9,25 +9,44 @@ import Svg from '../Svg/Svg.component';
 import config from './TextInput.component.config';
 import type { Props } from './TextInput.component.types';
 
+import './TextInput.component.css';
+
+
+/**
+ * @param {string} icon icon path
+ * @param {void} handleVisibility handleVisiblity function
+ *  @param  {boolean} visible - visibility state
+ * @returns {React.Node} return icon
+ */
+const _renderIcon = (icon?: string, handleVisibility: () => void, visible: boolean) => {
+  if (!icon) return { suffix: null, prefix: null };
+
+  return (
+    <div className="cursor:pointer" onClick={handleVisibility}>
+      <Svg
+        icon={visible ? icon : 'ADD'}
+        width="16px"
+        height="16px"
+      />
+    </div>
+  );
+};
 
 /**
  * Private function to render Svg icon
  *
  * @param  {string} icon - Icon to render
  * @param  {string} type - parameter type use to determining the position of icon
+ * @param  {void} handleVisibility - handleVisibility function
+ * @param  {boolean} visible - visibility state
  * @returns {React.Node} React Node
  */
-const _renderIconWithPosition = (icon?: string, type?: string) => {
-  if (!icon) return { suffix: null, prefix: null };
-  const svgElement = (
-    <Svg
-      icon={icon}
-      width="16px"
-      height="16px"
-    />
-  );
-  const suffix = type === 'password' ? svgElement : undefined;
-  const prefix = type !== 'password' ? svgElement : undefined;
+const _renderIconWithPosition = (
+  icon?: string, type?: string, handleVisibility: () => void, visible: boolean
+  ) => {
+  const svgIcon = _renderIcon(icon, handleVisibility, visible);
+  const prefix = type !== 'password' ? svgIcon : undefined;
+  const suffix = type === 'password' ? svgIcon : undefined;
 
   return { suffix, prefix };
 };
@@ -78,21 +97,30 @@ const _renderLabel = (label?: string, required?: boolean) => label && (
  */
 const _renderInput = (props: Props) => {
   const [error, setError] = React.useState(false);
+  const [visible, setVisibility] = React.useState(false);
 
   /**
    * @returns {void} - changing error state
    */
   const onBlur = (): void => (!props.value ? setError(true) : setError(false));
 
+  /**
+   * @returns {*} - side effect function to change visibility state
+   */
+  const handlerInputValueVisibility = () => {
+    setVisibility(prevValue => !prevValue);
+  };
+
   const errorBorderColor = error && props.required;
-  const { suffix, prefix } = _renderIconWithPosition(props.icon, props.type);
 
   return (
     <>
       {_renderLabel(props.label, props.required)}
       <Input
-        suffix={suffix}
-        prefix={prefix}
+        type={visible ? 'text' : 'password'}
+        {..._renderIconWithPosition(props.icon, props.type,
+          handlerInputValueVisibility,
+          visible)}
         value={props.value}
         placeholder={props.placeholder}
         onChange={props.onChange}
