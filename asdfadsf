@@ -1,52 +1,11 @@
-app.js saya seperti ini :
 // @flow
-
-import * as React from 'react';
-
-
-import './App.css';
-import TextInput from './Components/TextInputComponent/TextInput.component';
-
-
-/**
- * first time app to render, will call this function
- *
- * @returns {React.Node} React Node
- */
-const App = (): React.Node => {
-  const [email, setEmail] = React.useState('');
-
-
-  /**
-   * @param {SyntheticInputEvent} event  - fa
-   * @return {void} -asdf
-   */
-  const handleEmailChange = (event: SyntheticInputEvent<HTMLInputElement>) => {
-    setEmail(event.target.value);
-  };
-
-  return (
-    <div className="App">
-      <header className="App-header">
-        <TextInput
-          label="Username"
-          placeholder="Username"
-          onChange={handleEmailChange}
-          value={email}
-          required
-        />
-      </header>
-    </div>
-  );
-};
-
-export default App;
-TextInput component saya seperti ini : // @flow
 
 import React from 'react';
 import { useState } from 'react';
 
 import { Input } from 'antd';
+
+import IconAssets from '../../assets/Icon/IconAssets';
 
 import config from './TextInput.component.config';
 import type { Props } from './TextInput.component.types';
@@ -108,11 +67,12 @@ const _renderInput = (props: Props): React.Node => {
       <Input
         value={props.value}
         placeholder={props.placeholder}
-        className={_inputBorderColor(errorBorderColor)}
         onChange={props.onChange}
-        onBlur={onBlur}
         maxLength={props.maxLength}
         disabled={props.disabled}
+        prefix={<img src={IconAssets[props.icon]} width="16px" />}
+        className={_inputBorderColor(errorBorderColor)}
+        onBlur={onBlur}
       />
       {props.required && showErrorMessage(error, props.label)}
     </>
@@ -134,30 +94,3 @@ const TextInput = (props: Props): React.Node =>
 TextInput.defaultProps = config.defaultProps;
 
 export default TextInput;
-Text input component config begini :// @flow
-
-const defaultProps = {
-  required: false,
-  disabled: false,
-  maxLength: 30,
-};
-
-export default {
-  defaultProps,
-};
-
-text input type begini :
-// @flow
-
-export type Props = {
-    label: string,
-    placeholder: string,
-    value: string,
-    onChange: () => void,
-    required?: boolean,
-    disabled?: boolean,
-    maxLength?: number
-}
-
-lalu mengapa ada error eslint pada saat memanggil component TextINput di app.js errornya adalah pada onChange, cannot create `TextInput` element because
-function [1] requires another argument from function type [2] in property onChange
