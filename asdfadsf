@@ -1,27 +1,114 @@
-Test suite failed to run
+// @flow
 
-    Configuration error:
-    
-    Could not locate module ./search.png mapped as:
-    RelativeImageStub.
-    
-    Please check your configuration for these entries:
-    {
-      "moduleNameMapper": {
-        "/^[@./a-zA-Z0-9$_-]+\.(png|gif)$/": "RelativeImageStub"
-      },
-      "resolver": undefined
-    }
+import * as React from 'react';
 
-      1 | // @flow
-      2 |
-    > 3 | import search from './search.png';
-        | ^
-      4 |
-      5 | const IconAssets = {
-      6 |   SEARCH: search,
+import { Input } from 'antd';
 
-      at createNoMappedModuleFoundError (node_modules/jest-config/node_modules/jest-resolve/build/resolver.js:759:17)
-      at Object.require (src/Assets/Icon/IconAssets.js:3:1)
-      at Object.require (src/Components/TextInputComponent/TextInput.component.js:8:1)
-      at Object.require (src/Components/TextInputComponent/TextInput.component.test.js:9:1)
+import Svg from '../Svg/Svg.component';
+
+import config from './TextInput.component.config';
+import type { Props } from './TextInput.component.types';
+
+
+/**
+ * Private function to render Svg icon
+ *
+ * @param  {string} icon - Icon to render
+ * @returns {React.Node} React Node
+ */
+const _renderIcon = (icon?: string) => icon && (
+  <Svg
+    icon={icon}
+    width="16px"
+    height="16px"
+  />
+);
+
+/**
+ * @param {boolean} error - check contain value on input
+ * @param {string} label - to show label on the error message
+ * @returns {React.Node} - return error if no input
+ */
+const showErrorMessage = (error: boolean, label: string) => (
+  (error && label ?
+    <div className="text-red-500 text-14px">{`${label} Cannot be Empty`}</div>
+  : '')
+);
+
+
+/**
+ *
+ * @param {*} error - to check if the input error or not
+ * @returns {string} - to give border color red style when error
+ */
+export const _inputBorderColor = (error: boolean): string => {
+  if (error) {
+    return 'border-tp-red hover:border-tp-red';
+  }
+
+  return '';
+};
+
+/**
+ *
+ * @param {string} label -
+ * @param {boolean} required -
+ * @returns {React.Node} - render label of input
+ */
+const _renderLabel = (label?: string, required?: boolean) => label && (
+<div className="text-14px">
+  {`${label}`}
+  {required && <span className="text-red-500">*</span>}
+</div>
+            );
+
+
+/**
+ *
+ * @param {*} props - props
+ * @returns {*} - node
+ */
+const _renderInput = (props: Props) => {
+  const [error, setError] = React.useState(false);
+
+  /**
+   * @returns {void} - changing error state
+   */
+  const onBlur = (): void => (!props.value ? setError(true) : setError(false));
+
+  const errorBorderColor = error && props.required;
+
+  return (
+    <>
+      {_renderLabel(props.label, props.required)}
+      <Input
+        suffix={_renderIcon(props.icon)}
+        value={props.value}
+        placeholder={props.placeholder}
+        onChange={props.onChange}
+        maxLength={props.maxLength}
+        disabled={props.disabled}
+        prefix={_renderIcon(props.icon)}
+        className={_inputBorderColor(errorBorderColor)}
+        onBlur={onBlur}
+      />
+      {props.required && showErrorMessage(error, props.label)}
+    </>
+  );
+};
+
+/**
+ * @param { Props } props - this is a prop types
+ * @returns {React.Node} Text Input
+ */
+const TextInput = (props: Props): React.Node =>
+ (
+   <div className="w-[100%] flex flex-col items-start">
+     {_renderInput(props)}
+   </div>
+  );
+
+
+TextInput.defaultProps = config.defaultProps;
+
+export default TextInput;
