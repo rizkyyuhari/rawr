@@ -4,6 +4,8 @@ import * as React from 'react';
 
 import { Input } from 'antd';
 
+import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+
 import Svg from '../Svg/Svg.component';
 
 import config from './TextInput.component.config';
@@ -16,19 +18,26 @@ import './TextInput.component.css';
  * @param {string} icon icon path
  * @param {void} handleVisibility handleVisiblity function
  *  @param  {boolean} visible - visibility state
- * @returns {React.Node} return icon
+ *  @param  {string} type - type
+ * @returns {React.Node | null} return icon
  */
-const _renderIcon = (icon?: string, handleVisibility: () => void, visible: boolean) => {
-  if (!icon) return { suffix: null, prefix: null };
+const _renderIcon = (icon?: string, handleVisibility: () => void, visible: boolean, type: string) => {
+  if (type === 'password') {
+    return (
+      <div className="cursor:pointer" data-testid="icon-eye" onClick={handleVisibility}>
+        {visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+      </div>
+    );
+  }
+  if (!icon) return null;
 
   return (
-    <div className="cursor:pointer" onClick={handleVisibility}>
-      <Svg
-        icon={visible ? icon : 'ADD'}
-        width="16px"
-        height="16px"
-      />
-    </div>
+    <Svg
+      icon={icon}
+      width="16px"
+      height="16px"
+    />
+
   );
 };
 
@@ -42,9 +51,9 @@ const _renderIcon = (icon?: string, handleVisibility: () => void, visible: boole
  * @returns {React.Node} React Node
  */
 const _renderIconWithPosition = (
-  icon?: string, type?: string, handleVisibility: () => void, visible: boolean
+  icon?: string, type: string, handleVisibility: () => void, visible: boolean
   ) => {
-  const svgIcon = _renderIcon(icon, handleVisibility, visible);
+  const svgIcon = _renderIcon(icon, handleVisibility, visible, type);
   const prefix = type !== 'password' ? svgIcon : undefined;
   const suffix = type === 'password' ? svgIcon : undefined;
 
@@ -97,7 +106,7 @@ const _renderLabel = (label?: string, required?: boolean) => label && (
  */
 const _renderInput = (props: Props) => {
   const [error, setError] = React.useState(false);
-  const [visible, setVisibility] = React.useState(false);
+  const [visible, setVisibility] = React.useState(true);
 
   /**
    * @returns {void} - changing error state
