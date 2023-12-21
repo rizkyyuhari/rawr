@@ -1,160 +1,63 @@
 // @flow
 
-import * as React from 'react';
+// $FlowFixMe
 
-import { Input } from 'antd';
+import React from 'React';
 
-import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { render, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
-import Svg from '../Svg/Svg.component';
-
-import config from './TextInput.component.config';
-import type { Props } from './TextInput.component.types';
-
-import './TextInput.component.css';
+import { InputTextType } from './Constants';
+import TextInput, { _inputBorderColor } from './TextInput.component';
 
 
-/**
- * @param {string} icon icon path
- * @param {void} handleVisibility handleVisiblity function
- *  @param  {boolean} visible - visibility state
- *  @param  {string} type - type
- * @returns {React.Node | null} return icon
- */
-const _renderIcon = (icon?: string, handleVisibility: () => void, visible: boolean, type: string) => {
-  if (type === 'password') {
-    return (
-      <div className="cursor:pointer" data-testid="icon-eye" onClick={handleVisibility}>
-        {visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-      </div>
+const props = {
+  value: '',
+  label: 'Username',
+  required: true,
+  placeholder: 'Type your username',
+  onChange: jest.fn((event: SyntheticInputEvent<HTMLInputElement>) => { console.log(event); }),
+  maxLength: 30,
+  disabled: false,
+};
+
+describe('TextInput Component', () => {
+  it('should return border-tp-red if value of input i empty ', () => {
+    const result = _inputBorderColor(true);
+
+    expect(result).toBe('border-tp-red hover:border-tp-red');
+  });
+
+  it('should show Username Cannot be Empty if input value empty', () => {
+    const { getByPlaceholderText, getByText } = render(<TextInput {...props} />);
+
+    const inputElement = getByPlaceholderText(props.placeholder);
+
+    fireEvent.blur(inputElement);
+
+    expect(getByText('Username Cannot be Empty')).toBeDefined();
+    expect(getByText('*')).toBeDefined();
+  });
+
+  it('should not show error Usernam Cannot be Empty if input value filled', () => {
+    const { getByPlaceholderText, queryByText } = render(<TextInput {...props} value="raihan" />);
+
+    const inputElement = getByPlaceholderText(props.placeholder);
+
+    fireEvent.blur(inputElement);
+
+    expect(queryByText('Username Cannot be Empty')).toBeNull();
+  });
+
+  it('should change input type to password if user clicked icon invisible on the input', async () => {
+    const { getByTestId } = render(
+      <TextInput {...props} value="raihan" type="password" />
     );
-  }
-  if (!icon) return null;
+    const eyeIcon = getByTestId('icon-eye');
 
-  return (
-    <Svg
-      icon={icon}
-      width="16px"
-      height="16px"
-    />
+    userEvent.click(eyeIcon);
+    const input = getByTestId('text-input');
 
-  );
-};
-
-/**
- * Private function to render Svg icon
- *
- * @param  {string} icon - Icon to render
- * @param  {string} type - parameter type use to determining the position of icon
- * @param  {void} handleVisibility - handleVisibility function
- * @param  {boolean} visible - visibility state
- * @returns {React.Node} React Node
- */
-const _renderIconWithPosition = (
-  icon?: string, type: string, handleVisibility: () => void, visible: boolean
-  ) => {
-  const svgIcon = _renderIcon(icon, handleVisibility, visible, type);
-  const prefix = type !== 'password' ? svgIcon : undefined;
-  const suffix = type === 'password' ? svgIcon : undefined;
-
-  return { suffix, prefix };
-};
-
-/**
- * @param {boolean} error - check contain value on input
- * @param {string} label - to show label on the error message
- * @returns {React.Node} - return error if no input
- */
-const showErrorMessage = (error: boolean, label: string) => (
-  (error && label ?
-    <div className="text-red-500 text-14px">{`${label} Cannot be Empty`}</div>
-  : '')
-);
-
-
-/**
- *
- * @param {*} error - to check if the input error or not
- * @returns {string} - to give border color red style when error
- */
-export const _inputBorderColor = (error: boolean): string => {
-  if (error) {
-    return 'border-tp-red hover:border-tp-red';
-  }
-
-  return '';
-};
-
-/**
- *
- * @param {string} label -
- * @param {boolean} required -
- * @returns {React.Node} - render label of input
- */
-const _renderLabel = (label?: string, required?: boolean) => label && (
-<div className="text-14px">
-  {`${label}`}
-  {required && <span className="text-red-500">*</span>}
-</div>
-);
-
-
-/**
- *
- * @param {*} props - props
- * @returns {*} - node
- */
-const _renderInput = (props: Props) => {
-  const [error, setError] = React.useState(false);
-  const [visible, setVisibility] = React.useState(true);
-
-  /**
-   * @returns {void} - changing error state
-   */
-  const onBlur = (): void => (!props.value ? setError(true) : setError(false));
-
-  /**
-   * @returns {*} - side effect function to change visibility state
-   */
-  const handlerInputValueVisibility = () => {
-    setVisibility(prevValue => !prevValue);
-  };
-
-  const errorBorderColor = error && props.required;
-
-  return (
-    <>
-      {_renderLabel(props.label, props.required)}
-      <Input
-        type={visible ? 'text' : 'password'}
-        {..._renderIconWithPosition(props.icon, props.type,
-          handlerInputValueVisibility,
-          visible)}
-        value={props.value}
-        placeholder={props.placeholder}
-        onChange={props.onChange}
-        maxLength={props.maxLength}
-        disabled={props.disabled}
-        className={_inputBorderColor(errorBorderColor)}
-        onBlur={onBlur}
-      />
-      {props.required && showErrorMessage(error, props.label)}
-    </>
-  );
-};
-
-/**
- * @param { Props } props - this is a prop types
- * @returns {React.Node} Text Input
- */
-const TextInput = (props: Props): React.Node =>
- (
-   <div className="w-[100%] flex flex-col items-start">
-     {_renderInput(props)}
-   </div>
-  );
-
-
-TextInput.defaultProps = config.defaultProps;
-
-export default TextInput;
+    expect(input.type).toBe(InputTextType.PASSWORD);
+  });
+});
