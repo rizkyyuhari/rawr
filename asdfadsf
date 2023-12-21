@@ -36,6 +36,14 @@ export const _inputBorderColor = (error: boolean) => {
   return '';
 };
 
+/**
+ * 
+ * @param {*} icon 
+ * @returns {React.Node} - return icon component
+ */
+const _showIcon = (icon: string): React.Node => icon && <img src={IconAssets[props.icon]} width="16px" />;
+
+
 
 /**
  *
@@ -70,7 +78,7 @@ const _renderInput = (props: Props): React.Node => {
         onChange={props.onChange}
         maxLength={props.maxLength}
         disabled={props.disabled}
-        prefix={<img src={IconAssets[props.icon]} width="16px" />}
+        prefix={_showIcon(props.icon)}
         className={_inputBorderColor(errorBorderColor)}
         onBlur={onBlur}
       />
