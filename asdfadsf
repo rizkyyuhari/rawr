@@ -14,15 +14,23 @@ import type { Props } from './TextInput.component.types';
  * Private function to render Svg icon
  *
  * @param  {string} icon - Icon to render
+ * @param  {string} type - parameter type use to determining the position of icon
  * @returns {React.Node} React Node
  */
-const _renderIcon = (icon?: string) => icon && (
-  <Svg
-    icon={icon}
-    width="16px"
-    height="16px"
-  />
-);
+const _renderIconWithPosition = (icon?: string, type?: string) => {
+  if (!icon) return { suffix: null, prefix: null };
+  const svgElement = (
+    <Svg
+      icon={icon}
+      width="16px"
+      height="16px"
+    />
+  );
+  const suffix = type === 'password' ? svgElement : undefined;
+  const prefix = type !== 'password' ? svgElement : undefined;
+
+  return { suffix, prefix };
+};
 
 /**
  * @param {boolean} error - check contain value on input
@@ -60,7 +68,7 @@ const _renderLabel = (label?: string, required?: boolean) => label && (
   {`${label}`}
   {required && <span className="text-red-500">*</span>}
 </div>
-            );
+);
 
 
 /**
@@ -77,18 +85,19 @@ const _renderInput = (props: Props) => {
   const onBlur = (): void => (!props.value ? setError(true) : setError(false));
 
   const errorBorderColor = error && props.required;
+  const { suffix, prefix } = _renderIconWithPosition(props.icon, props.type);
 
   return (
     <>
       {_renderLabel(props.label, props.required)}
       <Input
-        suffix={_renderIcon(props.icon)}
+        suffix={suffix}
+        prefix={prefix}
         value={props.value}
         placeholder={props.placeholder}
         onChange={props.onChange}
         maxLength={props.maxLength}
         disabled={props.disabled}
-        prefix={_renderIcon(props.icon)}
         className={_inputBorderColor(errorBorderColor)}
         onBlur={onBlur}
       />
