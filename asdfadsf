@@ -1,63 +1,200 @@
 // @flow
 
-// $FlowFixMe
+import * as React from 'react';
 
-import React from 'React';
+import { Input } from 'antd';
 
-import { render, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+
+import Svg from '../Svg/Svg.component';
 
 import { InputTextType } from './Constants';
-import TextInput, { _inputBorderColor } from './TextInput.component';
+import config from './TextInput.component.config';
+import type { Props } from './TextInput.component.types';
+import { emailValidation } from './TextInput.component.utils';
 
 
-const props = {
-  value: '',
-  label: 'Username',
-  required: true,
-  placeholder: 'Type your username',
-  onChange: jest.fn((event: SyntheticInputEvent<HTMLInputElement>) => { console.log(event); }),
-  maxLength: 30,
-  disabled: false,
+import './TextInput.component.css';
+
+
+/**
+ * @param {string} icon icon path
+ * @param {void} handleVisibility handleVisiblity function
+ * @param  {boolean} visible - visibility state
+ * @param  {string} type - type
+ * @returns {React.Node | null} return icon
+ */
+const _renderIcon = (icon?: string, handleVisibility: () => void, visible: boolean, type?: string) => {
+  if (type === InputTextType.PASSWORD) {
+    return (
+      <div className="cursor:pointer" data-testid="icon-eye" onClick={handleVisibility}>
+        {visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+      </div>
+    );
+  }
+  if (!icon) return null;
+
+  return (
+    <Svg
+      icon={icon}
+      width="16px"
+      height="16px"
+    />
+
+  );
 };
 
-describe('TextInput Component', () => {
-  it('should return border-tp-red if value of input i empty ', () => {
-    const result = _inputBorderColor(true);
+/**
+ * Private function to render icon position
+ *
+ * @param  {string} icon - Icon to render
+ * @param  {string} type - parameter type use to determining the position of icon
+ * @param  {void} handleVisibility - handleVisibility function
+ * @param  {boolean} visible - visibility state
+ * @returns {React.Node} React Node
+ */
+const _renderIconPosition = (
+  icon?: string, type?: string, handleVisibility: () => void, visible: boolean
+  ) => {
+  const svgIcon = _renderIcon(icon, handleVisibility, visible, type);
+  const prefix = type !== InputTextType.PASSWORD ? svgIcon : undefined;
+  const suffix = type === InputTextType.PASSWORD ? svgIcon : undefined;
 
-    expect(result).toBe('border-tp-red hover:border-tp-red');
-  });
+  return { suffix, prefix };
+};
 
-  it('should show Username Cannot be Empty if input value empty', () => {
-    const { getByPlaceholderText, getByText } = render(<TextInput {...props} />);
 
-    const inputElement = getByPlaceholderText(props.placeholder);
+/**
+ * Function for returning error message
+ *
+ * @param {String} email from props for type input
+ * @returns {React.Node} return html tag <p></p> for error message
+ * @returns {null} return null if email input is correct
+ */
+const displayErrorEmailValidation = (email?: string) => {
+  if (!emailValidation(email) && email !== '') {
+    return <div className="text-red-500 text-14px">Invalid email format</div>;
+  }
 
-    fireEvent.blur(inputElement);
+  return null;
+};
 
-    expect(getByText('Username Cannot be Empty')).toBeDefined();
-    expect(getByText('*')).toBeDefined();
-  });
+/**
+ * Function for returning error information based on validation email
+ *
+ * @param {String} email - from props for type input
+ * @returns {String} return error tag
+ */
+const errorValidationText = (email?: string) => {
+  if (!email) {
+    return null;
+  }
 
-  it('should not show error Usernam Cannot be Empty if input value filled', () => {
-    const { getByPlaceholderText, queryByText } = render(<TextInput {...props} value="raihan" />);
+  return displayErrorEmailValidation(email);
+};
 
-    const inputElement = getByPlaceholderText(props.placeholder);
 
-    fireEvent.blur(inputElement);
+/**
+ * @param {boolean} required - required
+ * @param {boolean} error - check contain value on input
+ * @param {string} label - to show label on the error message
+ * @returns {React.Node} - return error if no input
+ */
+const showErrorMessage = (required?: boolean, error: boolean, label: string) => {
+  if (error && label && required) {
+    return <div className="text-red-500 text-14px">{`${label} Cannot be Empty`}</div>;
+  }
 
-    expect(queryByText('Username Cannot be Empty')).toBeNull();
-  });
+  return '';
+};
 
-  it('should change input type to password if user clicked icon invisible on the input', async () => {
-    const { getByTestId } = render(
-      <TextInput {...props} value="raihan" type="password" />
-    );
-    const eyeIcon = getByTestId('icon-eye');
 
-    userEvent.click(eyeIcon);
-    const input = getByTestId('text-input');
+/**
+ *
+ * @param {*} error - to check if the input error or not
+ * @returns {string} - to give border color red style when error
+ */
+export const _inputBorderColor = (error: boolean): string => {
+  if (error) {
+    return 'border-tp-red hover:border-tp-red';
+  }
 
-    expect(input.type).toBe(InputTextType.PASSWORD);
-  });
-});
+  return '';
+};
+
+/**
+ *
+ * @param {string} label -
+ * @param {boolean} required -
+ * @returns {React.Node} - render label of input
+ */
+const _renderLabel = (label?: string, required?: boolean) => label && (
+<div className="text-14px">
+  {`${label}`}
+  {required && <span className="text-red-500">*</span>}
+</div>
+);
+
+
+/**
+ *
+ * @param {*} props - props
+ * @returns {*} - node
+ */
+const _renderInput = (props: Props) => {
+  const [error, setError] = React.useState(false);
+  const [visible, setVisibility] = React.useState(true);
+
+  /**
+   * @returns {void} - changing error state
+   */
+  const onBlur = (): void => (!props.value ? setError(true) : setError(false));
+
+  /**
+   * @returns {*} - side effect function to change visibility state
+   */
+  const handlerInputValueVisibility = () => {
+    setVisibility(prevValue => !prevValue);
+  };
+
+  const errorBorderColor = error && props.required;
+
+  return (
+    <>
+      {_renderLabel(props.label, props.required)}
+      <Input
+        type={visible ? InputTextType.TEXT : InputTextType.PASSWORD}
+        {..._renderIconPosition(props.icon, props.type,
+          handlerInputValueVisibility,
+          visible)}
+        value={props.value}
+        placeholder={props.placeholder}
+        onChange={props.onChange}
+        maxLength={props.maxLength}
+        disabled={props.disabled}
+        className={_inputBorderColor(errorBorderColor)}
+        onBlur={onBlur}
+        data-testid="text-input"
+      />
+      { props.type === 'email' ?
+      errorValidationText(props.value) :
+      showErrorMessage(props.required, error, props.label)}
+    </>
+  );
+};
+
+/**
+ * @param { Props } props - this is a prop types
+ * @returns {React.Node} Text Input
+ */
+const TextInput = (props: Props): React.Node =>
+ (
+   <div className="w-[100%] flex flex-col items-start">
+     {_renderInput(props)}
+   </div>
+  );
+
+
+TextInput.defaultProps = config.defaultProps;
+
+export default TextInput;
