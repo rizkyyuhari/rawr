@@ -85,13 +85,7 @@ const displayErrorEmailValidation = (email?: string) => {
  * @param {String} email - from props for type input
  * @returns {String} return error tag
  */
-const errorValidationText = (email?: string) => {
-  if (!email) {
-    return null;
-  }
-
-  return displayErrorEmailValidation(email);
-};
+const errorValidationText = (email?: string) => displayErrorEmailValidation(email);
 
 
 /**
@@ -101,11 +95,11 @@ const errorValidationText = (email?: string) => {
  * @returns {React.Node} - return error if no input
  */
 const showErrorMessage = (required?: boolean, error: boolean, label: string) => {
-  if (error && label && required) {
+  if (error && required) {
     return <div className="text-red-500 text-14px">{`${label} Cannot be Empty`}</div>;
   }
 
-  return '';
+  return null;
 };
 
 
@@ -114,12 +108,12 @@ const showErrorMessage = (required?: boolean, error: boolean, label: string) => 
  * @param {*} error - to check if the input error or not
  * @returns {string} - to give border color red style when error
  */
-export const _inputBorderColor = (error: boolean): string => {
+export const _inputBorderColor = (error: boolean): string | null => {
   if (error) {
     return 'border-tp-red hover:border-tp-red';
   }
 
-  return '';
+  return null;
 };
 
 /**
@@ -189,7 +183,7 @@ const _renderInput = (props: Props) => {
  */
 const TextInput = (props: Props): React.Node =>
  (
-   <div className="w-[100%] flex flex-col items-start">
+   <div className="w-[100%] flex flex-col items-start mt-2">
      {_renderInput(props)}
    </div>
   );
