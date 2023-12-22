@@ -106,9 +106,15 @@ const showErrorMessage = (required?: boolean, error: boolean, label: string) => 
 /**
  *
  * @param {*} error - to check if the input error or not
+ * @param {*} errorEmail - to check if the input error or not
+ * @param {string} type - to check if the input error or not
  * @returns {string} - to give border color red style when error
  */
-export const _inputBorderColor = (error: boolean): string | null => {
+export const _borderColor = (error: boolean, value: string, type?: string): string | null => {
+  if (type === 'email' && !emailValidation(value) && value !== '') {
+
+  }
+
   if (error) {
     return 'border-tp-red hover:border-tp-red';
   }
@@ -151,7 +157,7 @@ const _renderInput = (props: Props) => {
     setVisibility(prevValue => !prevValue);
   };
 
-  const errorBorderColor = error && props.required;
+  const errorAnyType = error && props.required;
 
   return (
     <>
@@ -166,7 +172,7 @@ const _renderInput = (props: Props) => {
         onChange={props.onChange}
         maxLength={props.maxLength}
         disabled={props.disabled}
-        className={_inputBorderColor(errorBorderColor)}
+        className={_borderColor(errorAnyType, props.value, props.type)}
         onBlur={onBlur}
         data-testid="text-input"
       />
