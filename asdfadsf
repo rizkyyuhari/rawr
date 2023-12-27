@@ -1,206 +1,90 @@
 // @flow
 
+
 import * as React from 'react';
 
-import { Input } from 'antd';
-
-import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
-
-import Svg from '../Svg/Svg.component';
+import { render, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { InputTextType } from './Constants';
-import config from './TextInput.component.config';
-import type { Props } from './TextInput.component.types';
-import { emailValidation } from './TextInput.component.utils';
+import TextInput, { _errorBorderColor } from './TextInput.component';
 
 
-import './TextInput.component.css';
+const props = {
+  value: '',
+  label: 'Username',
+  required: true,
+  placeholder: 'Type your username',
+  onChange: jest.fn((event: SyntheticInputEvent<HTMLInputElement>) => { console.log(event); }),
+  maxLength: 30,
+  disabled: false,
+};
 
+describe('TextInput Component', () => {
+  it('should return border-tp-red if value of input i empty or email format is incorrect ', () => {
+    const email = 'a';
+    const result = _errorBorderColor(true, email);
 
-/**
- * @param {void} handleVisibility handleVisiblity function
- * @param  {boolean} visible - visibility state
- * @param  {string} type - type
- * @param {string} icon icon path
- * @returns {React.Node | null} return icon
- */
-const _renderIcon = (handleVisibility: () => void, visible: boolean, type?: string, icon?: string) => {
-  if (type === InputTextType.PASSWORD) {
-    return (
-      <div className="cursor:pointer" data-testid="icon-eye" onClick={handleVisibility}>
-        {visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-      </div>
+    expect(result).toBe('border-tp-red hover:border-tp-red');
+  });
+
+  it('should show Username Cannot be Empty if input value empty', () => {
+    const { getByPlaceholderText, getByText } = render(<TextInput {...props} />);
+
+    const inputElement = getByPlaceholderText(props.placeholder);
+
+    fireEvent.blur(inputElement);
+
+    expect(getByText('Username Cannot be Empty')).toBeDefined();
+    expect(getByText('*')).toBeDefined();
+  });
+
+  it('should not show error Usernam Cannot be Empty if input value filled', () => {
+    const { getByPlaceholderText, queryByText } = render(<TextInput {...props} value="raihan" />);
+
+    const inputElement = getByPlaceholderText(props.placeholder);
+
+    fireEvent.blur(inputElement);
+
+    expect(queryByText('Username Cannot be Empty')).toBeNull();
+  });
+
+  it('should change input type to text if user clicked icon visible on the input password', async () => {
+    const { getByTestId } = render(
+      <TextInput {...props} value="raihan" type="password" />
     );
-  }
-  if (!icon) return null;
+    const eyeIcon = getByTestId('icon-eye');
 
-  return (
-    <Svg
-      icon={icon}
-      width="16px"
-      height="16px"
-    />
+    userEvent.click(eyeIcon);
+    const input = getByTestId('text-input');
 
-  );
+    expect(input.type).toBe(InputTextType.TEXT);
+  });
+});
+// @flow
+
+export type Props = {
+  label: string,
+  placeholder: string,
+  value: string,
+  onChange: (event: SyntheticInputEvent<HTMLInputElement>) => void,
+  required?: boolean,
+  disabled?: boolean,
+  maxLength?: number,
+  icon?: string,
+  type?: string
 };
 
-/**
- * Private function to render icon position
- *
- * @param  {void} handleVisibility - handleVisibility function
- * @param  {boolean} visible - visibility state
- * @param  {string} type - parameter type use to determining the position of icon
- * @param  {string} icon - Icon to render
- * @returns {React.Node} React Node
- */
-const _renderIconPosition = (
-   handleVisibility: () => void, visible: boolean, type?: string, icon?: string
-  ) => {
-  const svgIcon = _renderIcon(handleVisibility, visible, type, icon);
-  const prefix = type !== InputTextType.PASSWORD ? svgIcon : undefined;
-  const suffix = type === InputTextType.PASSWORD ? svgIcon : undefined;
+export type InputTextTypes = {|
+  TEXT: string,
+  PASSWORD: string,
+  EMAIL: string
+|}
 
-  return { suffix, prefix };
-};
+export type RegexValidationTypes = {|
+  EMAIL: Object
+|} 
 
+gimana cara fix bagian ini onChange: jest.fn((event: SyntheticInputEvent<HTMLInputElement>) => { console.log(event); }), unexpected console statement.
 
-/**
- * Function for returning error message
- *
- * @param {String} email from props for type input
- * @returns {React.Node} return html tag <p></p> for error message
- * @returns {null} return null if email input is correct
- */
-const displayErrorEmailValidation = (email?: string) => {
-  if (!emailValidation(email) && email !== '') {
-    return <div className="text-red-500 text-14px">Invalid email format</div>;
-  }
-
-  return null;
-};
-
-/**
- * Function for returning error information based on validation email
- *
- * @param {String} email - from props for type input
- * @returns {String} return error tag
- */
-const errorValidationText = (email?: string) => displayErrorEmailValidation(email);
-
-
-/**
- * @param {boolean} error - check contain value on input
- * @param {string} label - to show label on the error message
- * @param {boolean} required - required
- * @returns {React.Node} - return error if no input
- */
-const showErrorMessage = (error: boolean, label: string, required?: boolean) => {
-  if (error && required) {
-    return <div className="text-red-500 text-14px">{`${label} Cannot be Empty`}</div>;
-  }
-
-  return null;
-};
-
-/**
- *
- * @param {*} email - email
- * @param {*} type - type
- * @returns {boolean} - is email valid
- */
-const isEmailValid = (email?: string, type?: string) =>
-type === 'email' && !emailValidation(email) && email !== '';
-
-
-/**
- *
- * @param {*} error - to check if the input error or not
- * @param {*} value - to check if the input error or not
- * @param {string} type - to check if the input error or not
- * @returns {string} - to give border color red style when error
- */
-export const _errorBorderColor = (error: boolean, value: string, type?: string): string | null => {
-  if (error || isEmailValid(value, type)) {
-    return 'border-tp-red hover:border-tp-red';
-  }
-
-  return null;
-};
-
-/**
- *
- * @param {string} label -
- * @param {boolean} required -
- * @returns {React.Node} - render label of input
- */
-const _renderLabel = (label?: string, required?: boolean) => label && (
-<div className="text-14px">
-  {`${label}`}
-  {required && <span className="text-red-500">*</span>}
-</div>
-);
-
-
-/**
- *
- * @param {*} props - props
- * @returns {*} - node
- */
-const _renderInput = (props: Props) => {
-  const [error, setError] = React.useState(false);
-  const [visible, setVisibility] = React.useState(true);
-
-  /**
-   * @returns {void} - changing error state
-   */
-  const onBlur = (): void => (!props.value ? setError(true) : setError(false));
-
-  /**
-   * @returns {*} - side effect function to change visibility state
-   */
-  const handlerInputValueVisibility = () => {
-    setVisibility(prevValue => !prevValue);
-  };
-
-  const errorAnyType = error && props.required;
-
-  return (
-    <>
-      {_renderLabel(props.label, props.required)}
-      <Input
-        type={visible ? InputTextType.TEXT : InputTextType.PASSWORD}
-        {..._renderIconPosition(
-          handlerInputValueVisibility,
-          visible, props.type, props.icon
-          )}
-        value={props.value}
-        placeholder={props.placeholder}
-        onChange={props.onChange}
-        maxLength={props.maxLength}
-        disabled={props.disabled}
-        className={_errorBorderColor(errorAnyType, props.value, props.type)}
-        onBlur={onBlur}
-        data-testid="text-input"
-      />
-      { props.type === 'email' ?
-      errorValidationText(props.value) :
-      showErrorMessage(error, props.label, props.required)}
-    </>
-  );
-};
-
-/**
- * @param { Props } props - this is a prop types
- * @returns {React.Node} Text Input
- */
-const TextInput = (props: Props): React.Node =>
- (
-   <div className="w-[100%] flex flex-col items-start mt-2">
-     {_renderInput(props)}
-   </div>
-  );
-
-
-TextInput.defaultProps = config.defaultProps;
-
-export default TextInput;
+contoh penggunaan nya adalaah untuk merubah state jadi saya bingung untuk mocking nya
