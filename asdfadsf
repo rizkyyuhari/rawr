@@ -1,90 +1,101 @@
-// @flow
+import { Button, Divider, Modal } from "antd";
+import ContentLayout from "../../layout/ContentLayout";
+import { useState } from "react";
 
+const data = [
+  { total: 2, label: "Squad" },
+  { total: 17, label: "Project" },
+  { total: 19, label: "Frontend" },
+  { total: 8, label: "Backend" },
+  { total: 6, label: "QA" },
+  { total: 2, label: "QE" },
+];
 
-import * as React from 'react';
+const _renderCaptainDetail = () => (
+  <>
+    <Divider dashed className="bg-slate-200 w-0.5  h-0.5" />
+    <h1 className="text-customgrey font-bold">Tribe Captain</h1>
+    <p className="text-xl">Talent Name</p>
+    <h1 className="text-customgrey mb-1">
+      talentbtpn@btpn.com | +6281283292376
+    </h1>
+  </>
+);
 
-import { render, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+const _dividerOfEachComposition = (index, totalComposition) => (
+  <>
+    {console.log("index pecah",index)}
+    {(index % 4 !== 0 && index !== totalComposition) && (
+      <Divider type="vertical" dashed className="bg-black w-0.5 m-0 h-12" />
+    )}
+  </>
+);
 
-import { InputTextType } from './Constants';
-import TextInput, { _errorBorderColor } from './TextInput.component';
+const _renderCompositionItem = (composition, index, totalComposition) => (
+  <div key={index} className="flex justify-around items-center w-1/4 ">
+    <div className="flex flex-col justify-center items-center w-full">
+      <h1 className="text-5xl font-bold w-full text-center">
+        {composition.total}
+      </h1>
+      <h1 className="text-xl text-customgrey">{composition.label}</h1>
+    </div>
+    {_dividerOfEachComposition(index, totalComposition)}
+  </div>
+);
 
+const _renderCompositionlist = (data) => (
+  <>
+    <div className="flex flex-wrap min-h-32 justify-center items-center">
+      {data.map((datum, index) => (
+        <>{_renderCompositionItem(datum, index + 1, data.length)}</>
+      ))}
+    </div>
+  </>
+);
 
-const props = {
-  value: '',
-  label: 'Username',
-  required: true,
-  placeholder: 'Type your username',
-  onChange: jest.fn((event: SyntheticInputEvent<HTMLInputElement>) => { console.log(event); }),
-  maxLength: 30,
-  disabled: false,
+const _renderStreamComposition = (data) => (
+  <>
+    <p className="text-customgrey mt-2 font-bold">Tribe Composition</p>
+    {_renderCompositionlist(data)}
+  </>
+);
+
+const _renderStreamDetail = (handleCancel, visible) => (
+  <Modal
+    title={<div className="text-2xl font-bold">Stream A</div>}
+    centered
+    open={visible}
+    onCancel={handleCancel}
+    footer={null}
+  >
+    <div>
+      {_renderCaptainDetail()}
+      {_renderStreamComposition(data)}
+    </div>
+  </Modal>
+);
+
+const DashboardPage = () => {
+  const [visible, setVisible] = useState(false);
+
+  const showModal = () => {
+    setVisible(true);
+  };
+
+  const handleCancel = () => {
+    setVisible(false);
+  };
+
+  return (
+    <ContentLayout>
+      <div className="App">
+        <Button type="primary" onClick={showModal}>
+          Open Modal
+        </Button>
+        {_renderStreamDetail(handleCancel, visible)}
+      </div>
+    </ContentLayout>
+  );
 };
 
-describe('TextInput Component', () => {
-  it('should return border-tp-red if value of input i empty or email format is incorrect ', () => {
-    const email = 'a';
-    const result = _errorBorderColor(true, email);
-
-    expect(result).toBe('border-tp-red hover:border-tp-red');
-  });
-
-  it('should show Username Cannot be Empty if input value empty', () => {
-    const { getByPlaceholderText, getByText } = render(<TextInput {...props} />);
-
-    const inputElement = getByPlaceholderText(props.placeholder);
-
-    fireEvent.blur(inputElement);
-
-    expect(getByText('Username Cannot be Empty')).toBeDefined();
-    expect(getByText('*')).toBeDefined();
-  });
-
-  it('should not show error Usernam Cannot be Empty if input value filled', () => {
-    const { getByPlaceholderText, queryByText } = render(<TextInput {...props} value="raihan" />);
-
-    const inputElement = getByPlaceholderText(props.placeholder);
-
-    fireEvent.blur(inputElement);
-
-    expect(queryByText('Username Cannot be Empty')).toBeNull();
-  });
-
-  it('should change input type to text if user clicked icon visible on the input password', async () => {
-    const { getByTestId } = render(
-      <TextInput {...props} value="raihan" type="password" />
-    );
-    const eyeIcon = getByTestId('icon-eye');
-
-    userEvent.click(eyeIcon);
-    const input = getByTestId('text-input');
-
-    expect(input.type).toBe(InputTextType.TEXT);
-  });
-});
-// @flow
-
-export type Props = {
-  label: string,
-  placeholder: string,
-  value: string,
-  onChange: (event: SyntheticInputEvent<HTMLInputElement>) => void,
-  required?: boolean,
-  disabled?: boolean,
-  maxLength?: number,
-  icon?: string,
-  type?: string
-};
-
-export type InputTextTypes = {|
-  TEXT: string,
-  PASSWORD: string,
-  EMAIL: string
-|}
-
-export type RegexValidationTypes = {|
-  EMAIL: Object
-|} 
-
-gimana cara fix bagian ini onChange: jest.fn((event: SyntheticInputEvent<HTMLInputElement>) => { console.log(event); }), unexpected console statement.
-
-contoh penggunaan nya adalaah untuk merubah state jadi saya bingung untuk mocking nya
+export default DashboardPage;
